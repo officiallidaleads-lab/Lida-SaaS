@@ -10,53 +10,88 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. Extract actual company domain from snippet (NOT the search result URL!)
-        // The URL is often facebook.com/linkedin.com, which is useless for email prediction
+        // 1. SCRAPE THE ACTUAL PAGE (not just the snippet!)
+        let scrapedContent = snippet; // Fallback to snippet
         let domain = '';
         
-        // Try to find actual company domains in the snippet (e.g., almondestateltd.co.ke)
+        try {
+            console.log(`Attempting to scrape: ${url}`);
+            
+            // Fetch the actual webpage
+            const pageResponse = await fetch(url, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                },
+                signal: AbortSignal.timeout(8000) // 8 second timeout
+            });
+            
+            if (pageResponse.ok) {
+                const html = await pageResponse.text();
+                
+                // Extract text content (strip HTML tags)
+                const textContent = html
+                    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                
+                scrapedContent = textContent.substring(0, 5000); // Use first 5000 chars
+                console.log(`Successfully scraped ${scrapedContent.length} characters`);
+            } else {
+                console.warn(`Failed to scrape (${pageResponse.status}), using snippet only`);
+            }
+        } catch (scrapeError) {
+            console.warn("Scraping failed, using snippet only:", scrapeError);
+        }
+
+        // 2. Extract actual company domain from scraped content
         const domainPattern = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)/g;
-        const domainsInSnippet = snippet.match(domainPattern) || [];
+        const domainsInContent = scrapedContent.match(domainPattern) || [];
         
         // Filter out social media domains
         const socialDomains = ['facebook.com', 'linkedin.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com'];
-        const companyDomains = domainsInSnippet
+        const companyDomains = domainsInContent
             .map((d: string) => d.replace(/^https?:\/\/(www\.)?/, ''))
             .filter((d: string) => !socialDomains.some(social => d.includes(social)));
         
         domain = companyDomains[0] || ''; // Use first company domain found
         
-        console.log("Domain extraction:", { url, domainsInSnippet, companyDomains, selectedDomain: domain });
+        console.log("Domain extraction:", { domainsInContent: domainsInContent.slice(0, 5), companyDomains, selectedDomain: domain });
 
-        // 2. PRE-EXTRACTION: Use regex to find emails and phones in snippet
+        // 3. PRE-EXTRACTION: Use regex to find emails and phones in scraped content
         const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
         
-        // Improved phone pattern for Kenyan numbers: 07XX XXX XXX, +254 7XX XXX XXX, etc.
+        // Improved phone pattern for Kenyan numbers
         const phonePattern = /(?:\+254|0)[\s-]?[17]\d{1,2}[\s-]?\d{3}[\s-]?\d{3,4}|\d{4}[\s-]?\d{6}/g;
         
-        const extractedEmails = snippet.match(emailPattern) || [];
-        const extractedPhones = snippet.match(phonePattern)?.filter((p: string) => {
+        const extractedEmails = scrapedContent.match(emailPattern) || [];
+        const extractedPhones = scrapedContent.match(phonePattern)?.filter((p: string) => {
             const digits = p.replace(/\D/g, '');
-            return digits.length >= 9 && digits.length <= 13; // Valid phone number length
+            return digits.length >= 9 && digits.length <= 13;
         }) || [];
         
-        console.log("Regex extraction:", { extractedEmails, extractedPhones });
+        // Remove duplicates
+        const uniqueEmails = [...new Set(extractedEmails)].slice(0, 3); // Max 3 emails
+        const uniquePhones = [...new Set(extractedPhones)].slice(0, 2); // Max 2 phones
+        
+        console.log("Regex extraction:", { extractedEmails: uniqueEmails, extractedPhones: uniquePhones });
 
-        // 3. Construct Enhanced Prompt
+        // 4. Construct Enhanced Prompt
         const promptText = `You are a lead enrichment specialist. Extract and organize contact details from this company information.
 
 Company: ${company}
 Website: ${url}
-Context: ${snippet}
+Context: ${scrapedContent.substring(0, 2000)}
 
 PRE-EXTRACTED DATA (use these if they look valid):
-- Emails found: ${extractedEmails.join(', ') || 'none'}
-- Phones found: ${extractedPhones.join(', ') || 'none'}
+- Emails found: ${uniqueEmails.join(', ') || 'none'}
+- Phones found: ${uniquePhones.join(', ') || 'none'}
 
 INSTRUCTIONS:
-- Use the pre-extracted emails/phones if they exist
+- Use the pre-extracted emails/phones if they exist and look legitimate
 - If no email was pre-extracted, predict using domain (${domain}): info@, contact@, hello@, support@, sales@
-- For phone: Use pre-extracted phone if available, otherwise look for any mentions in context
+- For phone: Use pre-extracted phone if available
 - Extract any address/location mentioned
 - Be precise and use the actual data when available
 
@@ -69,7 +104,7 @@ Return ONLY a JSON object (no markdown, no explanations):
     "social_linkedin": "linkedin url or null"
 }`;
 
-        // 4. Call Groq API
+        // 5. Call Groq API
         console.log("Calling Groq API for lead enrichment...");
         
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -90,7 +125,7 @@ Return ONLY a JSON object (no markdown, no explanations):
                         content: promptText
                     }
                 ],
-                temperature: 0.3, // Lower temp for data extraction (we want precision)
+                temperature: 0.3,
                 max_tokens: 500
             })
         });
@@ -103,24 +138,24 @@ Return ONLY a JSON object (no markdown, no explanations):
 
         const result = await response.json();
         
-        // 5. Parse Response
+        // 6. Parse Response
         const text = result.choices?.[0]?.message?.content || "{}";
         const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         let data = JSON.parse(cleanedText);
 
-        // 6. OVERRIDE: If AI still missed extracted data, force it in
-        if (!data.email && extractedEmails.length > 0) {
-            data.email = extractedEmails[0];
+        // 7. OVERRIDE: If AI still missed extracted data, force it in
+        if (!data.email && uniqueEmails.length > 0) {
+            data.email = uniqueEmails[0];
             data.confidence = 'high';
             console.log("AI missed email, using regex extraction:", data.email);
         }
         
-        if (!data.phone && extractedPhones.length > 0) {
-            data.phone = extractedPhones[0];
+        if (!data.phone && uniquePhones.length > 0) {
+            data.phone = uniquePhones[0];
             console.log("AI missed phone, using regex extraction:", data.phone);
         }
 
-        // 7. Final Fallback: If still no email and we have domain, predict
+        // 8. Final Fallback: If still no email and we have domain, predict
         if (!data.email && domain) {
             const commonPrefixes = ['info', 'contact', 'hello', 'support', 'sales'];
             data.email = `${commonPrefixes[0]}@${domain}`;
