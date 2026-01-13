@@ -1,4 +1,5 @@
 
+import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -151,6 +152,26 @@ export const LeadService = {
         }
     },
 
+    // Real AI Enrichment
+    enrichLead: async (lead: { title: string, link: string, snippet: string }) => {
+        try {
+            const res = await axios.post('/api/enrich', {
+                company: lead.title,
+                url: lead.link,
+                snippet: lead.snippet
+            });
+            return {
+                emails: res.data.email ? [res.data.email] : [],
+                phones: res.data.phone ? [res.data.phone] : [],
+                relevance_score: res.data.confidence === 'high' ? 95 : 70
+            };
+        } catch (error) {
+            console.error("Enrichment failed", error);
+            return null;
+        }
+    },
+
+    // Legacy Mock (Kept for fallback if needed, but unused now)
     mockEnrich: async (url: string) => {
         // KEEPING MOCK FOR NOW - Will replace with real API later
         await new Promise(resolve => setTimeout(resolve, 2000));

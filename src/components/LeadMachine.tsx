@@ -145,7 +145,12 @@ const [session, setSession] = useState<any>(null);
         setResults(updatedResults);
 
         try {
-            const data = await LeadService.mockEnrich(url);
+            // Note: enrichLead helps us get real data from Gemini
+            const data = await LeadService.enrichLead({
+                title: results.find(r => r.link === url)?.title,
+                link: url,
+                snippet: results.find(r => r.link === url)?.snippet
+            });
             
             const finalResults = results.map(r => {
                 if (r.link === url) return { ...r, enriching: false, enrichment: data };
