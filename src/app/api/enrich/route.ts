@@ -10,54 +10,60 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. SCRAPE THE ACTUAL PAGE (not just the snippet!)
-        let scrapedContent = snippet; // Fallback to snippet
-        let domain = '';
-        
-        try {
-            console.log(`Attempting to scrape: ${url}`);
-            
-            // Fetch the actual webpage
-            const pageResponse = await fetch(url, {
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                },
-                signal: AbortSignal.timeout(8000) // 8 second timeout
-            });
-            
-            if (pageResponse.ok) {
-                const html = await pageResponse.text();
-                
-                // Extract text content (strip HTML tags)
-                const textContent = html
-                    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-                    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-                    .replace(/<[^>]+>/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-                
-                scrapedContent = textContent.substring(0, 5000); // Use first 5000 chars
-                console.log(`Successfully scraped ${scrapedContent.length} characters`);
-            } else {
-                console.warn(`Failed to scrape (${pageResponse.status}), using snippet only`);
-            }
-        } catch (scrapeError) {
-            console.warn("Scraping failed, using snippet only:", scrapeError);
-        }
-
-        // 2. Extract actual company domain from scraped content
+        // 1. EXTRACT COMPANY DOMAINS FROM SNIPPET FIRST
         const domainPattern = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)/g;
-        const domainsInContent = scrapedContent.match(domainPattern) || [];
+        const domainsInSnippet = snippet.match(domainPattern) || [];
         
-        // Filter out social media domains
         const socialDomains = ['facebook.com', 'linkedin.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com'];
-        const companyDomains = domainsInContent
+        const companyDomains = domainsInSnippet
             .map((d: string) => d.replace(/^https?:\/\/(www\.)?/, ''))
             .filter((d: string) => !socialDomains.some(social => d.includes(social)));
         
-        domain = companyDomains[0] || ''; // Use first company domain found
+        let domain = companyDomains[0] || '';
         
-        console.log("Domain extraction:", { domainsInContent: domainsInContent.slice(0, 5), companyDomains, selectedDomain: domain });
+        console.log("Initial domain extraction from snippet:", { companyDomains, selectedDomain: domain });
+
+        // 2. SMART SCRAPING: Only scrape if it's NOT social media
+        let scrapedContent = snippet; // Default to snippet
+        const isSocialMedia = socialDomains.some(social => url.includes(social));
+        
+        if (!isSocialMedia && url.startsWith('http')) {
+            try {
+                console.log(`Attempting to scrape company website: ${url}`);
+                
+                const pageResponse = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    signal: AbortSignal.timeout(8000)
+                });
+                
+                if (pageResponse.ok) {
+                    const html = await pageResponse.text();
+                    
+                    // Extract text content (strip HTML tags)
+                    const textContent = html
+                        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                        .replace(/<[^>]+>/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    
+                    if (textContent.length > 100) { // Only use if we got meaningful content
+                        scrapedContent = textContent.substring(0, 5000);
+                        console.log(`Successfully scraped ${scrapedContent.length} characters from company website`);
+                    } else {
+                        console.warn(`Scraped content too short (${textContent.length} chars), using snippet`);
+                    }
+                } else {
+                    console.warn(`Failed to scrape (${pageResponse.status}), using snippet`);
+                }
+            } catch (scrapeError) {
+                console.warn("Scraping failed, using snippet:", scrapeError);
+            }
+        } else {
+            console.log(`Skipping scrape for social media URL: ${url}`);
+        }
 
         // 3. PRE-EXTRACTION: Use regex to find emails and phones in scraped content
         const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
