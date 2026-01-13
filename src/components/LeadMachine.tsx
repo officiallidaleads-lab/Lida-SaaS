@@ -68,12 +68,27 @@ const [session, setSession] = useState<any>(null);
     };
 
     const buildQuery = () => {
-        // Broad, fuzzy search logic
-        const parts = [
-            `site:${platform}`,
-            niche,
-            location
-        ].filter(Boolean);
+        // Improved precision: Filter for companies/organizations only
+        const parts = [];
+        
+        // Platform filter
+        parts.push(`site:${platform}`);
+        
+        // Niche/Industry
+        if (niche) parts.push(`"${niche}"`);
+        
+        // Location - use quotes for exact match
+        if (location) parts.push(`"${location}"`);
+        
+        // Add filters to exclude personal profiles
+        if (platform === 'linkedin.com') {
+            // LinkedIn: Search for company pages only, exclude personal profiles
+            parts.push('(company OR organization OR "company page")');
+            parts.push('-"personal profile"');
+        } else if (platform === 'facebook.com') {
+            parts.push('(business OR company OR page)');
+        }
+        
         return parts.join(' ');
     };
 
@@ -335,19 +350,27 @@ const [session, setSession] = useState<any>(null);
                                                         {item.enrichment && (
                                                             <div className="mt-3 bg-green-50 border border-green-100 rounded-lg p-3 text-sm">
                                                                 <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
-                                                                    <CheckCircle className="w-4 h-4" /> AI Verified (Score: {item.enrichment.relevance_score})
+                                                                    <CheckCircle className="w-4 h-4" /> AI Enriched (Confidence: {item.enrichment.relevance_score}%)
                                                                 </div>
                                                                 <div className="space-y-1 text-slate-600">
-                                                                    {item.enrichment.emails.map((email: string) => (
-                                                                        <div key={email} className="flex items-center gap-2 text-xs">
-                                                                            <Mail className="w-3 h-3" /> {email}
-                                                                        </div>
-                                                                    ))}
-                                                                    {item.enrichment.phones.map((phone: string) => (
-                                                                        <div key={phone} className="flex items-center gap-2 text-xs">
-                                                                            <Smartphone className="w-3 h-3" /> {phone}
-                                                                        </div>
-                                                                    ))}
+                                                                    {item.enrichment.emails && item.enrichment.emails.length > 0 ? (
+                                                                        item.enrichment.emails.map((email: string) => (
+                                                                            <div key={email} className="flex items-center gap-2 text-xs">
+                                                                                <Mail className="w-3 h-3" /> {email}
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <div className="text-xs text-slate-400 italic">No email found</div>
+                                                                    )}
+                                                                    {item.enrichment.phones && item.enrichment.phones.length > 0 ? (
+                                                                        item.enrichment.phones.map((phone: string) => (
+                                                                            <div key={phone} className="flex items-center gap-2 text-xs">
+                                                                                <Smartphone className="w-3 h-3" /> {phone}
+                                                                            </div>
+                                                                        ))
+                                                                    ) : (
+                                                                        <div className="text-xs text-slate-400 italic">No phone found</div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         )}
