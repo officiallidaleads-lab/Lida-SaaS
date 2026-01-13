@@ -75,6 +75,13 @@ const [session, setSession] = useState<any>(null);
     };
 
     const handleSave = async (item: any) => {
+        // Prevent duplicate saves locally first
+        const isDuplicate = savedLeads.some(lead => lead.url === item.link);
+        if (isDuplicate) {
+            // Optional: You could show a small "Already saved" toast here
+            return;
+        }
+
         const lead = {
             company_name: item.title,
             niche,
@@ -84,9 +91,10 @@ const [session, setSession] = useState<any>(null);
             snippet: item.snippet,
             status: 'new' as const
         };
+        
+        // Optimistic update could happen here, but we'll wait for server
         await LeadService.saveLead(lead);
-        loadSavedLeads();
-        alert('Lead saved!');
+        await loadSavedLeads(); // Reload list
     };
 
     const handleEnrich = async (url: string) => {
@@ -291,10 +299,14 @@ const [session, setSession] = useState<any>(null);
                                                         </button>
                                                         <button 
                                                             onClick={() => handleSave(item)}
-                                                            className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg transition-all"
-                                                            title="Save Lead"
+                                                            className={`p-2 rounded-lg transition-all cursor-pointer ${
+                                                                savedLeads.some(l => l.url === item.link)
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                            }`}
+                                                            title={savedLeads.some(l => l.url === item.link) ? "Lead Saved" : "Save Lead"}
                                                         >
-                                                            <Save className="w-4 h-4" />
+                                                            {savedLeads.some(l => l.url === item.link) ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
                                                         </button>
                                                     </div>
                                                 </td>
