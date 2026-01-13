@@ -19,29 +19,43 @@ export async function POST(request: Request) {
             console.warn("Invalid URL, using company name for email prediction");
         }
 
-        // 2. Construct Enhanced Prompt
-        const promptText = `You are a lead enrichment specialist. Analyze this company and PREDICT their most likely contact details.
+        // 2. PRE-EXTRACTION: Use regex to find emails and phones in snippet (AI sometimes misses these!)
+        const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+        const phonePattern = /(\+?\d{1,4}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{0,4}/g;
+        
+        const extractedEmails = snippet.match(emailPattern) || [];
+        const extractedPhones = snippet.match(phonePattern)?.filter(p => p.replace(/\D/g, '').length >= 7) || [];
+        
+        console.log("Regex extraction:", { extractedEmails, extractedPhones });
+
+        // 3. Construct Enhanced Prompt
+        const promptText = `You are a lead enrichment specialist. Extract and organize contact details from this company information.
 
 Company: ${company}
 Website: ${url}
 Context: ${snippet}
 
+PRE-EXTRACTED DATA (use these if they look valid):
+- Emails found: ${extractedEmails.join(', ') || 'none'}
+- Phones found: ${extractedPhones.join(', ') || 'none'}
+
 INSTRUCTIONS:
-- For email: If not explicitly shown, predict using the domain (${domain}). Common patterns: info@, contact@, hello@, support@, sales@
-- For phone: Look for any phone numbers in the context. If none found, return null.
-- For address: Extract any location/address mentioned in the context.
-- Be creative and confident in your predictions.
+- Use the pre-extracted emails/phones if they exist
+- If no email was pre-extracted, predict using domain (${domain}): info@, contact@, hello@, support@, sales@
+- For phone: Use pre-extracted phone if available, otherwise look for any mentions in context
+- Extract any address/location mentioned
+- Be precise and use the actual data when available
 
 Return ONLY a JSON object (no markdown, no explanations):
 {
-    "email": "predicted email or null",
+    "email": "extracted or predicted email",
     "phone": "extracted phone or null", 
     "confidence": "high/medium/low",
     "formatted_address": "extracted address or null",
     "social_linkedin": "linkedin url or null"
 }`;
 
-        // 3. Call Groq API
+        // 4. Call Groq API
         console.log("Calling Groq API for lead enrichment...");
         
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -55,14 +69,14 @@ Return ONLY a JSON object (no markdown, no explanations):
                 messages: [
                     {
                         role: "system",
-                        content: "You are a lead enrichment assistant. Always predict contact details when possible. Respond with valid JSON only, no markdown."
+                        content: "You are a lead enrichment assistant. ALWAYS use pre-extracted data when provided. Only predict if extraction is empty. Respond with valid JSON only, no markdown."
                     },
                     {
                         role: "user",
                         content: promptText
                     }
                 ],
-                temperature: 0.5, // Slightly higher for more creative predictions
+                temperature: 0.3, // Lower temp for data extraction (we want precision)
                 max_tokens: 500
             })
         });
@@ -75,17 +89,29 @@ Return ONLY a JSON object (no markdown, no explanations):
 
         const result = await response.json();
         
-        // 4. Parse Response
+        // 5. Parse Response
         const text = result.choices?.[0]?.message?.content || "{}";
         const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         let data = JSON.parse(cleanedText);
 
-        // 5. Fallback: If AI returned null email but we have a domain, make smart predictions
+        // 6. OVERRIDE: If AI still missed extracted data, force it in
+        if (!data.email && extractedEmails.length > 0) {
+            data.email = extractedEmails[0];
+            data.confidence = 'high';
+            console.log("AI missed email, using regex extraction:", data.email);
+        }
+        
+        if (!data.phone && extractedPhones.length > 0) {
+            data.phone = extractedPhones[0];
+            console.log("AI missed phone, using regex extraction:", data.phone);
+        }
+
+        // 7. Final Fallback: If still no email and we have domain, predict
         if (!data.email && domain) {
             const commonPrefixes = ['info', 'contact', 'hello', 'support', 'sales'];
-            data.email = `${commonPrefixes[0]}@${domain}`; // Default to info@
+            data.email = `${commonPrefixes[0]}@${domain}`;
             data.confidence = data.confidence || 'medium';
-            console.log(`Fallback email prediction: ${data.email}`);
+            console.log(`Final fallback email prediction: ${data.email}`);
         }
 
         console.log("Groq enrichment successful!", data);
