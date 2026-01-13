@@ -193,37 +193,15 @@ const [session, setSession] = useState<any>(null);
                     
                     <div className="flex items-center gap-4">
                         {usage && (
-                            <div className="hidden md:flex flex-col items-end mr-6 min-w-[140px]">
+                            <div className="hidden md:flex flex-col items-end mr-4">
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                                    {plan} Plan Usage
+                                    {plan} Plan
                                 </div>
-                                
-                                {/* Searches Progress */}
-                                <div className="w-full mb-1 group relative cursor-help">
-                                    <div className="flex justify-between text-xs text-slate-600 mb-0.5">
-                                        <span>Searches</span>
-                                        <span className="font-semibold">{usage.searches_count}/{PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 0}</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full rounded-full transition-all duration-500 ${usage.searches_count >= (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 100) ? 'bg-red-500' : 'bg-blue-500'}`}
-                                            style={{ width: `${Math.min(100, (usage.searches_count / (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 1)) * 100)}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Saves Progress */}
-                                <div className="w-full group relative cursor-help">
-                                    <div className="flex justify-between text-xs text-slate-600 mb-0.5">
-                                        <span>Saves</span>
-                                        <span className="font-semibold">{usage.leads_saved_count}/{PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.saves || 0}</span>
-                                    </div>
-                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full rounded-full transition-all duration-500 ${usage.leads_saved_count >= (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.saves || 100) ? 'bg-red-500' : 'bg-green-500'}`}
-                                            style={{ width: `${Math.min(100, (usage.leads_saved_count / (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.saves || 1)) * 100)}%` }}
-                                        />
-                                    </div>
+                                <div className="bg-slate-100 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${usage.searches_count >= (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 100) ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                    <span>
+                                        {usage.searches_count} / {PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 0} Credits
+                                    </span>
                                 </div>
                             </div>
                         )}

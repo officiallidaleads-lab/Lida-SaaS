@@ -8,8 +8,14 @@ export async function POST(request: Request) {
     try {
         const { company, url, snippet } = await request.json();
 
-        // 1. Select Model (Flash is fast & cheap)
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // Debug: Check if key exists (don't log the actual key in prod)
+        if (!process.env.GEMINI_API_KEY) {
+            console.error("Missing GEMINI_API_KEY");
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
+
+        // 1. Select Model (Gemini Pro is safest default)
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         // 2. Construct Prompt
         const prompt = `
