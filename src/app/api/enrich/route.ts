@@ -10,24 +10,38 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. Construct Prompt
-        const promptText = `You are a lead enrichment bot. 
-Analyze this company information and predict/extract valid contact details.
+        // 1. Extract domain from URL for smart predictions
+        let domain = '';
+        try {
+            const urlObj = new URL(url);
+            domain = urlObj.hostname.replace('www.', '');
+        } catch (e) {
+            console.warn("Invalid URL, using company name for email prediction");
+        }
+
+        // 2. Construct Enhanced Prompt
+        const promptText = `You are a lead enrichment specialist. Analyze this company and PREDICT their most likely contact details.
 
 Company: ${company}
 Website: ${url}
 Context: ${snippet}
 
-Return ONLY a JSON object with this format (no markdown):
+INSTRUCTIONS:
+- For email: If not explicitly shown, predict using the domain (${domain}). Common patterns: info@, contact@, hello@, support@, sales@
+- For phone: Look for any phone numbers in the context. If none found, return null.
+- For address: Extract any location/address mentioned in the context.
+- Be creative and confident in your predictions.
+
+Return ONLY a JSON object (no markdown, no explanations):
 {
-    "email": "best guess support/info email or null",
-    "phone": "best guess phone number or null",
+    "email": "predicted email or null",
+    "phone": "extracted phone or null", 
     "confidence": "high/medium/low",
-    "formatted_address": "best guess address or null",
+    "formatted_address": "extracted address or null",
     "social_linkedin": "linkedin url or null"
 }`;
 
-        // 2. Call Groq API (OpenAI-compatible, FREE!)
+        // 3. Call Groq API
         console.log("Calling Groq API for lead enrichment...");
         
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -37,18 +51,18 @@ Return ONLY a JSON object with this format (no markdown):
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile", // Fast and smart model
+                model: "llama-3.3-70b-versatile",
                 messages: [
                     {
                         role: "system",
-                        content: "You are a lead enrichment assistant. Always respond with valid JSON only, no markdown."
+                        content: "You are a lead enrichment assistant. Always predict contact details when possible. Respond with valid JSON only, no markdown."
                     },
                     {
                         role: "user",
                         content: promptText
                     }
                 ],
-                temperature: 0.3,
+                temperature: 0.5, // Slightly higher for more creative predictions
                 max_tokens: 500
             })
         });
@@ -61,14 +75,20 @@ Return ONLY a JSON object with this format (no markdown):
 
         const result = await response.json();
         
-        // 3. Parse Response
+        // 4. Parse Response
         const text = result.choices?.[0]?.message?.content || "{}";
-        
-        // Clean any potential markdown
         const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const data = JSON.parse(cleanedText);
+        let data = JSON.parse(cleanedText);
 
-        console.log("Groq enrichment successful!");
+        // 5. Fallback: If AI returned null email but we have a domain, make smart predictions
+        if (!data.email && domain) {
+            const commonPrefixes = ['info', 'contact', 'hello', 'support', 'sales'];
+            data.email = `${commonPrefixes[0]}@${domain}`; // Default to info@
+            data.confidence = data.confidence || 'medium';
+            console.log(`Fallback email prediction: ${data.email}`);
+        }
+
+        console.log("Groq enrichment successful!", data);
         return NextResponse.json(data);
 
     } catch (error: unknown) {
