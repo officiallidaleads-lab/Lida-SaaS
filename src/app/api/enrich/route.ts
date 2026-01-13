@@ -32,32 +32,51 @@ export async function POST(request: Request) {
             }
         `;
 
-        // 2. Call Gemini REST API directly (Bypassing SDK to avoid version issues)
-        // Using gemini-2.0-flash as per user's working cURL example
+        // 2. Call Gemini REST API with Model Fallback Strategy
+        // We try multiple models in order of preference to handle 404s (availability) or 429s (rate limits)
+        const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
         const apiKey = process.env.GEMINI_API_KEY;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        
+        let lastError = null;
+        let successResponse = null;
 
-        console.log("Sending request to Gemini REST API (gemini-2.0-flash)...");
+        for (const model of models) {
+            try {
+                console.log(`Attempting enrichment with model: ${model}...`);
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: promptText }]
-                }]
-            })
-        });
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: promptText }] }]
+                    })
+                });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Gemini REST API Error:", errorText);
-            throw new Error(`Gemini API Failed: ${response.status} ${response.statusText}`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    // If rate limited (429) or not found (404), throw to try next model
+                    // For other errors (500), we might also want to retry, so we treat all non-ok as try-next
+                    throw new Error(`${response.status} ${response.statusText} - ${errorText}`);
+                }
+
+                successResponse = await response.json();
+                console.log(`Success with model: ${model}`);
+                break; // Exit loop on success
+
+            } catch (error: any) {
+                console.warn(`Failed with ${model}:`, error.message);
+                lastError = error;
+                // Continue to next model
+            }
         }
 
-        const result = await response.json();
+        if (!successResponse) {
+            console.error("All Gemini models failed.");
+            throw lastError || new Error("All models failed");
+        }
+        
+        const result = successResponse;
         
         // 3. Parse Response
         // The structure is result.candidates[0].content.parts[0].text
