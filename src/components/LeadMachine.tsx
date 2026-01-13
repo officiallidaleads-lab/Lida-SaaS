@@ -12,6 +12,7 @@ export default function LeadMachine() {
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [savedLeads, setSavedLeads] = useState<Lead[]>([]);
+    const [error, setError] = useState<string | null>(null);
     
     // Usage State
     const [usage, setUsage] = useState<any>(null);
@@ -77,17 +78,24 @@ const [session, setSession] = useState<any>(null);
     };
 
     const handleSearch = async () => {
-        // Enforce Search Limit
-        const check = await UsageService.checkAndIncrement('search');
-        if (!check.allowed) {
-            setLimitMessage(check.error || 'Daily search limit reached.');
-            setShowLimitModal(true);
-            return;
-        }
-        await loadUsage(); // Re-fetch usage to update UI
-
+        setError(null);
         setLoading(true);
         setResults([]);
+
+        // Enforce Search Limit (Fail-Open)
+        try {
+            const check = await UsageService.checkAndIncrement('search');
+            if (!check.allowed) {
+                setLimitMessage(check.error || 'Daily search limit reached.');
+                setShowLimitModal(true);
+                setLoading(false);
+                return;
+            }
+            await loadUsage(); // Re-fetch usage to update UI
+        } catch (err) {
+            console.warn("Usage check failed, allowing search anyway:", err);
+        }
+
         try {
             const query = buildQuery();
             const start = (page - 1) * 10 + 1;
@@ -98,7 +106,7 @@ const [session, setSession] = useState<any>(null);
             }
         } catch (error) {
             console.error(error);
-            alert('Search failed. Check console.');
+            setError('Search failed. Please try again later.');
         } finally {
             setLoading(false);
         }
@@ -293,6 +301,15 @@ const [session, setSession] = useState<any>(null);
                                 </div>
                             </div>
                         </div>
+
+
+                        {/* Error Message */}
+                        {error && (
+                            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-pulse">
+                                <div className="w-2 h-2 bg-red-500 rounded-full" />
+                                {error}
+                            </div>
+                        )}
 
                         {/* Search Results */}
                         {results.length > 0 && (

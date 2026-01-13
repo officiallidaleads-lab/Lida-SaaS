@@ -9,9 +9,12 @@ export default function Auth() {
     const [mode, setMode] = useState<'signin' | 'signup'>('signin');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
     const handleGoogleLogin = async () => {
         setLoading(true);
+        setError(null);
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
@@ -21,7 +24,7 @@ export default function Auth() {
             });
             if (error) throw error;
         } catch (error: any) {
-            alert(error.message);
+            setError(error.message);
             setLoading(false);
         }
     };
@@ -29,6 +32,7 @@ export default function Auth() {
     const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
         try {
             if (mode === 'signup') {
                 const { error } = await supabase.auth.signUp({
@@ -36,18 +40,19 @@ export default function Auth() {
                     password,
                 });
                 if (error) throw error;
-                alert('Account created! You have been signed in automatically.');
+                // Immediate success feedback
+                setSuccess('Account created! Logging you in...');
+                setTimeout(() => window.location.reload(), 1500);
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
                 if (error) throw error;
+                window.location.reload();
             }
-            // Force reload to update session state immediately
-            window.location.reload();
         } catch (error: any) {
-            alert(error.message);
+            setError(error.message);
             setLoading(false);
         }
     };
@@ -95,15 +100,29 @@ export default function Auth() {
                         </p>
                     </div>
 
+                    {/* Error / Success Messages */}
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-pulse">
+                            <div className="w-2 h-2 bg-red-500 rounded-full" />
+                            {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full" />
+                            {success}
+                        </div>
+                    )}
+
                     <div className="flex bg-slate-100 p-1 rounded-lg mb-6">
                         <button 
-                            onClick={() => setMode('signin')}
+                            onClick={() => { setMode('signin'); setError(null); }}
                             className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'signin' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             Log In
                         </button>
                         <button 
-                            onClick={() => setMode('signup')}
+                            onClick={() => { setMode('signup'); setError(null); }}
                             className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'signup' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
                         >
                             Sign Up
@@ -113,8 +132,8 @@ export default function Auth() {
                     <div className="space-y-4">
                         <button
                             onClick={handleGoogleLogin}
-                            disabled={loading}
-                            className="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-3 px-4 rounded-xl transition-all shadow-sm"
+                            disabled={loading || !!success}
+                            className="w-full flex items-center justify-center gap-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-3 px-4 rounded-xl transition-all shadow-sm disabled:opacity-50"
                         >
                             {!loading ? (
                                 <>

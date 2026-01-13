@@ -11,16 +11,16 @@ interface UpgradeProps {
 
 export default function Upgrade({ onBack, currentPlan }: UpgradeProps) {
     const [loading, setLoading] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
     const handleUpgrade = async (plan: string) => {
         setLoading(plan);
+        setError(null);
         try {
             // MOCK PAYMENT PROCESS
-            // In real world: Redirect to Stripe Checkout
-            // For now: Instantly upgrade user
-            
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error("No user found");
+            if (!user) throw new Error("No user found. Please login again.");
 
             const { error } = await supabase
                 .from('profiles')
@@ -29,12 +29,11 @@ export default function Upgrade({ onBack, currentPlan }: UpgradeProps) {
 
             if (error) throw error;
             
-            alert(`Successfully upgraded to ${plan}!`);
-            window.location.reload();
+            setSuccess(`Successfully upgraded to ${plan}! Refreshing...`);
+            setTimeout(() => window.location.reload(), 2000);
 
         } catch (error: any) {
-            alert(error.message);
-        } finally {
+            setError(error.message || "Upgrade failed. Please try again.");
             setLoading(null);
         }
     };
@@ -47,6 +46,20 @@ export default function Upgrade({ onBack, currentPlan }: UpgradeProps) {
                     <h1 className="text-4xl font-bold text-slate-900 mb-4">Choose Your Plan</h1>
                     <p className="text-xl text-slate-500">Unlock unlimited leads and scale your outreach.</p>
                 </div>
+
+                {/* Messages */}
+                {error && (
+                    <div className="max-w-2xl mx-auto mb-8 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl flex items-center justify-center gap-2 animate-pulse">
+                        <div className="w-2 h-2 bg-red-500 rounded-full" />
+                        {error}
+                    </div>
+                )}
+                {success && (
+                    <div className="max-w-2xl mx-auto mb-8 bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-xl flex items-center justify-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        {success}
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* FREE */}
