@@ -58,8 +58,11 @@ export async function POST(request: Request) {
 
                     if (response.status === 429) {
                         console.warn(`Rate limit hit for ${model}. Waiting to retry...`);
-                        // Wait 5 seconds before retrying (exponentialish backoff could be better but keep it simple)
-                        await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+                        
+                        // Gemini Free Tier requires waiting significantly (often >6s)
+                        // We use a progressive backoff: 10s, 20s, 30s
+                        const waitTime = 10000 * attempt;
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
                         continue; // Try again
                     }
 
@@ -86,6 +89,13 @@ export async function POST(request: Request) {
 
         if (!successResponse) {
             console.error("Gemini API failed after retries.");
+            // Return a specific 429 response if appropriate, else 500
+            if (lastError?.message?.includes('429')) {
+                return NextResponse.json(
+                    { error: "Usage limit exceeded. Please wait a minute and try again." }, 
+                    { status: 429 }
+                );
+            }
             throw lastError || new Error("Enrichment failed after retries");
         }
         
