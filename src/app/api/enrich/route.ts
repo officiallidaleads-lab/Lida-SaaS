@@ -14,8 +14,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. Select Model (Gemini Pro is safest default)
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        // 1. Select Model (Using Gemini 2.0 Flash as per 2026 standards)
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         // 2. Construct Prompt
         const prompt = `
