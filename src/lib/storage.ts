@@ -1,3 +1,11 @@
+
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export interface Lead {
     id: string;
     company_name: string;
@@ -12,47 +20,50 @@ export interface Lead {
     notes?: string;
     enrichment?: any;
     date_added: string;
+    user_id?: string; // Optional for now until auth is fully moved
 }
 
-const STORAGE_KEY = 'lida_leads_v2';
-
 export const LeadService = {
-    getLeads: (): Lead[] => {
-        if (typeof window === 'undefined') return [];
-        const stored = localStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
-    },
-
-    saveLead: (lead: Omit<Lead, 'id' | 'date_added'>): Lead => {
-        const leads = LeadService.getLeads();
-        const newLead: Lead = {
-            ...lead,
-            id: crypto.randomUUID(),
-            date_added: new Date().toISOString(),
-        };
-        leads.unshift(newLead);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
-        return newLead;
-    },
-
-    updateLead: (id: string, updates: Partial<Lead>): Lead | null => {
-        const leads = LeadService.getLeads();
-        const index = leads.findIndex(l => l.id === id);
-        if (index === -1) return null;
+    getLeads: async (): Promise<Lead[]> => {
+        const { data, error } = await supabase
+            .from('leads')
+            .select('*')
+            .order('created_at', { ascending: false });
         
-        leads[index] = { ...leads[index], ...updates };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
-        return leads[index];
+        if (error) {
+            console.error('Error fetching leads:', error);
+            return [];
+        }
+        return data || [];
     },
 
-    deleteLead: (id: string): void => {
-        const leads = LeadService.getLeads();
-        const newLeads = leads.filter(l => l.id !== id);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newLeads));
+    saveLead: async (lead: Omit<Lead, 'id' | 'date_added'>): Promise<Lead | null> => {
+        const { data, error } = await supabase
+            .from('leads')
+            .insert([lead])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error saving lead:', error);
+            return null;
+        }
+        return data;
+    },
+
+    deleteLead: async (id: string): Promise<void> => {
+        const { error } = await supabase
+            .from('leads')
+            .delete()
+            .eq('id', id);
+        
+        if (error) {
+            console.error('Error deleting lead:', error);
+        }
     },
 
     mockEnrich: async (url: string) => {
-        // Simulate API delay
+        // KEEPING MOCK FOR NOW - Will replace with real API later
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         return {

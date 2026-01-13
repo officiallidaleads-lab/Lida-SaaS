@@ -21,8 +21,9 @@ export default function LeadMachine() {
         loadSavedLeads();
     }, []);
 
-    const loadSavedLeads = () => {
-        setSavedLeads(LeadService.getLeads());
+    const loadSavedLeads = async () => {
+        const leads = await LeadService.getLeads();
+        setSavedLeads(leads);
     };
 
     const buildQuery = () => {
@@ -54,7 +55,7 @@ export default function LeadMachine() {
         }
     };
 
-    const handleSave = (item: any) => {
+    const handleSave = async (item: any) => {
         const lead = {
             company_name: item.title,
             niche,
@@ -64,7 +65,7 @@ export default function LeadMachine() {
             snippet: item.snippet,
             status: 'new' as const
         };
-        LeadService.saveLead(lead);
+        await LeadService.saveLead(lead);
         loadSavedLeads();
         alert('Lead saved!');
     };
@@ -315,8 +316,8 @@ export default function LeadMachine() {
                                         </td>
                                         <td className="py-4 px-6 text-right">
                                             <button 
-                                                onClick={() => {
-                                                    LeadService.deleteLead(lead.id);
+                                                onClick={async () => {
+                                                    await LeadService.deleteLead(lead.id);
                                                     loadSavedLeads();
                                                 }}
                                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
