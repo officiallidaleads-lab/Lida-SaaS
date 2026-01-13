@@ -5,9 +5,10 @@ import axios from 'axios';
 import { Search, Globe, MapPin, Building2, Save, Trash2, ExternalLink, Bot, CheckCircle, Smartphone, Mail, Loader2 } from 'lucide-react';
 import { LeadService, Lead, supabase, UsageService, PLAN_LIMITS } from '@/lib/storage';
 import Auth from './Auth';
+import Upgrade from './Upgrade';
 
 export default function LeadMachine() {
-    const [view, setView] = useState<'search' | 'leads'>('search');
+    const [view, setView] = useState<'search' | 'leads' | 'upgrade'>('search');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [savedLeads, setSavedLeads] = useState<Lead[]>([]);
@@ -157,6 +158,10 @@ const [session, setSession] = useState<any>(null);
         return <Auth />;
     }
 
+    if (view === 'upgrade') {
+        return <Upgrade onBack={() => setView('search')} currentPlan={plan} />;
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
             {/* Header */}
@@ -169,6 +174,12 @@ const [session, setSession] = useState<any>(null);
                         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent">
                             Lida <span className="text-slate-400 font-normal text-sm">v2.0</span>
                         </h1>
+                        <button 
+                            onClick={() => setView('upgrade')}
+                            className="ml-4 px-2 py-1 text-xs font-bold uppercase tracking-wide bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
+                        >
+                            {plan} Plan
+                        </button>
                     </div>
                     
                     <div className="flex items-center gap-4">
