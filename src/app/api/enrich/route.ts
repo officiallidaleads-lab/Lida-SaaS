@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         const phonePattern = /(\+?\d{1,4}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{0,4}/g;
         
         const extractedEmails = snippet.match(emailPattern) || [];
-        const extractedPhones = snippet.match(phonePattern)?.filter(p => p.replace(/\D/g, '').length >= 7) || [];
+        const extractedPhones = snippet.match(phonePattern)?.filter((p: string) => p.replace(/\D/g, '').length >= 7) || [];
         
         console.log("Regex extraction:", { extractedEmails, extractedPhones });
 
