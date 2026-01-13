@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/storage';
-import { Mail, Loader2, ShieldCheck, Zap, Globe } from 'lucide-react';
+import { Mail, Loader2, ShieldCheck, Zap, Globe, Lock, User } from 'lucide-react';
 
 export default function Auth() {
     const [loading, setLoading] = useState(false);
+    const [mode, setMode] = useState<'signin' | 'signup'>('signin');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
     const handleGoogleLogin = async () => {
         setLoading(true);
@@ -24,21 +26,28 @@ export default function Auth() {
         }
     };
 
-    const handleMagicLink = async (e: React.FormEvent) => {
+    const handleEmailAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/`,
-                }
-            });
-            if (error) throw error;
-            alert('Check your email for the login link!');
+            if (mode === 'signup') {
+                const { error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                });
+                if (error) throw error;
+                alert('Account created! You have been signed in automatically.');
+            } else {
+                const { error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+                if (error) throw error;
+            }
+            // Force reload to update session state immediately
+            window.location.reload();
         } catch (error: any) {
             alert(error.message);
-        } finally {
             setLoading(false);
         }
     };
@@ -81,10 +90,27 @@ export default function Auth() {
                             <ShieldCheck className="w-6 h-6 text-white" />
                         </div>
                         <h2 className="text-3xl font-bold text-slate-900">Welcome to Lida</h2>
-                        <p className="mt-2 text-slate-500">Sign in to access your lead dashboard</p>
+                        <p className="mt-2 text-slate-500">
+                            {mode === 'signin' ? 'Sign in to access your dashboard' : 'Create an account to get started'}
+                        </p>
                     </div>
 
-                    <div className="space-y-4 pt-4">
+                    <div className="flex bg-slate-100 p-1 rounded-lg mb-6">
+                        <button 
+                            onClick={() => setMode('signin')}
+                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'signin' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Log In
+                        </button>
+                        <button 
+                            onClick={() => setMode('signup')}
+                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${mode === 'signup' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Sign Up
+                        </button>
+                    </div>
+
+                    <div className="space-y-4">
                         <button
                             onClick={handleGoogleLogin}
                             disabled={loading}
@@ -110,11 +136,11 @@ export default function Auth() {
                                 <div className="w-full border-t border-slate-200"></div>
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-slate-500">Or continue with email</span>
+                                <span className="px-2 bg-white text-slate-500">Or using email</span>
                             </div>
                         </div>
 
-                        <form onSubmit={handleMagicLink} className="space-y-4">
+                        <form onSubmit={handleEmailAuth} className="space-y-4">
                             <div>
                                 <label htmlFor="email" className="sr-only">Email address</label>
                                 <div className="relative">
@@ -132,13 +158,31 @@ export default function Auth() {
                                     />
                                 </div>
                             </div>
+                            <div>
+                                <label htmlFor="password" className="sr-only">Password</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Lock className="h-5 w-5 text-slate-400" />
+                                    </div>
+                                    <input
+                                        id="password"
+                                        type="password"
+                                        required
+                                        minLength={6}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                                        placeholder="Enter password (min 6 chars)"
+                                    />
+                                </div>
+                            </div>
                             <button
                                 type="submit"
                                 disabled={loading}
                                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2"
                             >
                                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-                                Send Magic Link
+                                {mode === 'signin' ? 'Sign In' : 'Create Account'}
                             </button>
                         </form>
                     </div>
