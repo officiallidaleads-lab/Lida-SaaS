@@ -8,17 +8,13 @@ export async function POST(request: Request) {
     try {
         const { company, url, snippet } = await request.json();
 
-        // Debug: Check if key exists (don't log the actual key in prod)
         if (!process.env.GEMINI_API_KEY) {
             console.error("Missing GEMINI_API_KEY");
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. Select Model - Using 'gemini-pro' as it is the most stable v1 model
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-        // 2. Construct Prompt
-        const prompt = `
+        // 1. Construct Prompt
+        const promptText = `
             You are a lead enrichment bot. 
             Analyze this company information and predict/extract valid contact details.
             
@@ -30,29 +26,51 @@ export async function POST(request: Request) {
             {
                 "email": "best guess support/info email or null",
                 "phone": "best guess phone number or null",
-                "confidence": "high/medium/low"
+                "confidence": "high/medium/low",
+                "formatted_address": "best guess address or null",
+                "social_linkedin": "linkedin url or null"
             }
         `;
 
-        // 3. Generate Content
-        console.log("Creating generation request...");
-        const result = await model.generateContent(prompt);
-        console.log("Received response from Gemini");
-        const response = await result.response;
-        const text = response.text();
+        // 2. Call Gemini REST API directly (Bypassing SDK to avoid version issues)
+        // Using gemini-1.5-flash which is the current stable standard
+        const apiKey = process.env.GEMINI_API_KEY;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-        // 4. Clean & Parse JSON
-        // Gemini sometimes wraps in ```json ... ```
+        console.log("Sending request to Gemini REST API...");
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: promptText }]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("Gemini REST API Error:", errorText);
+            throw new Error(`Gemini API Failed: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        // 3. Parse Response
+        // The structure is result.candidates[0].content.parts[0].text
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        
+        // Clean markdown code blocks if present
         const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const data = JSON.parse(cleanedText);
 
         return NextResponse.json(data);
 
     } catch (error: any) {
-        console.error("Gemini API Error Detail:", JSON.stringify(error, null, 2));
-        if (error.response) {
-             console.error("Gemini Response Error:", await error.response.text());
-        }
+        console.error("Enrichment Error:", error);
         return NextResponse.json(
             { error: "Failed to enrich data", details: error.message },
             { status: 500 }
