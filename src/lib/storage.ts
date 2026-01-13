@@ -27,8 +27,86 @@ export interface Lead {
     user_id?: string; // Optional for now until auth is fully moved
 }
 
+// Plan Limits Configuration
+export const PLAN_LIMITS = {
+    free: { searches: 5, saves: 5 },
+    pro: { searches: 1000, saves: 1000 },
+    agency: { searches: 10000, saves: 10000 }
+};
+
+export const UsageService = {
+    // Get current usage and plan
+    getStatus: async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+
+        // Fetch Plan
+        let { data: profile } = await supabase
+            .from('profiles')
+            .select('plan')
+            .eq('id', user.id)
+            .single();
+
+        // Fetch Usage
+        let { data: usage } = await supabase
+            .from('user_usage')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+
+        // Handle missing records (e.g. old users)
+        if (!profile) {
+             // Create profile if missing
+             const { data: newProfile } = await supabase.from('profiles').insert([{ id: user.id, email: user.email }]).select().single();
+             profile = newProfile;
+        }
+        if (!usage) {
+             // Create usage if missing
+             const { data: newUsage } = await supabase.from('user_usage').insert([{ user_id: user.id }]).select().single();
+             usage = newUsage;
+        }
+
+        return {
+            plan: profile?.plan || 'free',
+            usage: usage || { searches_count: 0, leads_saved_count: 0 }
+        };
+    },
+
+    // Check if action is allowed & Increment
+    checkAndIncrement: async (action: 'search' | 'save'): Promise<{ allowed: boolean, error?: string }> => {
+        const status = await UsageService.getStatus();
+        if (!status) return { allowed: false, error: 'User not logged in' };
+
+        const { plan, usage } = status;
+        const limits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS];
+        
+        // Reset check (Simulated daily reset logic could go here, for now relying on DB trigger or just logic)
+        // Ideally DB should have a cron, but frontend can't rely on it. 
+        // We will assume usage counts are valid for "today".
+
+        if (action === 'search') {
+            if (usage.searches_count >= limits.searches) {
+                return { allowed: false, error: 'Daily search limit reached. Upgrade to Pro!' };
+            }
+            // Increment
+            await supabase.rpc('increment_searches', { user_id_param: usage.user_id });
+        } 
+        
+        if (action === 'save') {
+             if (usage.leads_saved_count >= limits.saves) {
+                return { allowed: false, error: 'Daily save limit reached. Upgrade to Pro!' };
+            }
+            // Increment
+            await supabase.rpc('increment_saves', { user_id_param: usage.user_id });
+        }
+
+        return { allowed: true };
+    }
+};
+
 export const LeadService = {
     getLeads: async (): Promise<Lead[]> => {
+
         const { data, error } = await supabase
             .from('leads')
             .select('*')

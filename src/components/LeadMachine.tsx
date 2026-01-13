@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, Globe, MapPin, Building2, Save, Trash2, ExternalLink, Bot, CheckCircle, Smartphone, Mail, Loader2 } from 'lucide-react';
-import { LeadService, Lead, supabase } from '@/lib/storage';
+import { LeadService, Lead, supabase, UsageService, PLAN_LIMITS } from '@/lib/storage';
 import Auth from './Auth';
 
 export default function LeadMachine() {
@@ -11,6 +11,10 @@ export default function LeadMachine() {
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [savedLeads, setSavedLeads] = useState<Lead[]>([]);
+    
+    // Usage State
+    const [usage, setUsage] = useState<any>(null);
+    const [plan, setPlan] = useState('free');
     
     // Search Filters
     const [platform, setPlatform] = useState('linkedin.com');
@@ -24,7 +28,10 @@ const [session, setSession] = useState<any>(null);
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
-            if (session) loadSavedLeads();
+            if (session) {
+                loadSavedLeads();
+                loadUsage();
+            }
         });
 
         // Listen for auth changes
@@ -32,7 +39,10 @@ const [session, setSession] = useState<any>(null);
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
-            if (session) loadSavedLeads();
+            if (session) {
+                loadSavedLeads();
+                loadUsage();
+            }
         });
 
         return () => subscription.unsubscribe();
@@ -43,6 +53,14 @@ const [session, setSession] = useState<any>(null);
         // Note: Real security is handled by RLS on backend
         const leads = await LeadService.getLeads();
         setSavedLeads(leads);
+    };
+
+    const loadUsage = async () => {
+        const status = await UsageService.getStatus();
+        if (status) {
+            setPlan(status.plan);
+            setUsage(status.usage);
+        }
     };
 
     const buildQuery = () => {
@@ -56,6 +74,14 @@ const [session, setSession] = useState<any>(null);
     };
 
     const handleSearch = async () => {
+        // Enforce Search Limit
+        const check = await UsageService.checkAndIncrement('search');
+        if (!check.allowed) {
+            alert(check.error || 'Limit Reached');
+            return;
+        }
+        await loadUsage(); // Re-fetch usage to update UI
+
         setLoading(true);
         setResults([]);
         try {
@@ -81,6 +107,14 @@ const [session, setSession] = useState<any>(null);
             // Optional: You could show a small "Already saved" toast here
             return;
         }
+
+        // Enforce Save Limit
+        const check = await UsageService.checkAndIncrement('save');
+        if (!check.allowed) {
+            alert(check.error || 'Limit Reached');
+            return;
+        }
+        await loadUsage();
 
         const lead = {
             company_name: item.title,
@@ -138,6 +172,22 @@ const [session, setSession] = useState<any>(null);
                     </div>
                     
                     <div className="flex items-center gap-4">
+                        {usage && (
+                            <div className="hidden md:flex flex-col items-end mr-4">
+                                <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                    {plan} Plan Usage
+                                </div>
+                                <div className="flex items-center gap-3 text-sm">
+                                    <span className={usage.searches_count >= PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].searches ? 'text-red-500 font-bold' : ''}>
+                                        Searches: {usage.searches_count} / {PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].searches}
+                                    </span>
+                                    <span className="w-px h-3 bg-slate-200"></span>
+                                    <span className={usage.leads_saved_count >= PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].saves ? 'text-red-500 font-bold' : ''}>
+                                        Saves: {usage.leads_saved_count} / {PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].saves}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                         <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
                             <button 
                                 onClick={() => setView('search')}
