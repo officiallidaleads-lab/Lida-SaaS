@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Database, Globe, MapPin, Building2, User, Save, Trash2, ExternalLink, Bot, CheckCircle, Smartphone, Mail, Loader2 } from 'lucide-react';
-import { LeadService, Lead } from '@/lib/storage';
+import { Search, Globe, MapPin, Building2, Save, Trash2, ExternalLink, Bot, CheckCircle, Smartphone, Mail, Loader2 } from 'lucide-react';
+import { LeadService, Lead, supabase } from '@/lib/storage';
+import Auth from './Auth';
 
 export default function LeadMachine() {
     const [view, setView] = useState<'search' | 'leads'>('search');
@@ -17,11 +18,29 @@ export default function LeadMachine() {
     const [location, setLocation] = useState('Nairobi');
     const [page, setPage] = useState(1);
 
+const [session, setSession] = useState<any>(null);
+
     useEffect(() => {
-        loadSavedLeads();
+        // Check active session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            if (session) loadSavedLeads();
+        });
+
+        // Listen for auth changes
+        const {
+            data: { subscription },
+        } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+            if (session) loadSavedLeads();
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const loadSavedLeads = async () => {
+        // Prevent loading if no session 
+        // Note: Real security is handled by RLS on backend
         const leads = await LeadService.getLeads();
         setSavedLeads(leads);
     };
@@ -92,6 +111,10 @@ export default function LeadMachine() {
         }
     };
 
+    if (!session) {
+        return <Auth />;
+    }
+
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
             {/* Header */}
@@ -106,24 +129,32 @@ export default function LeadMachine() {
                         </h1>
                     </div>
                     
-                    <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                    <div className="flex items-center gap-4">
+                        <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                            <button 
+                                onClick={() => setView('search')}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                                    view === 'search' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                Search
+                            </button>
+                            <button 
+                                onClick={() => setView('leads')}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                                    view === 'leads' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                            >
+                                My Leads ({savedLeads.length})
+                            </button>
+                        </nav>
                         <button 
-                            onClick={() => setView('search')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                view === 'search' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'
-                            }`}
+                            onClick={() => supabase.auth.signOut()}
+                            className="text-sm font-medium text-slate-500 hover:text-slate-800"
                         >
-                            Search
+                            Log Out
                         </button>
-                        <button 
-                            onClick={() => setView('leads')}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                view === 'leads' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'
-                            }`}
-                        >
-                            My Leads ({savedLeads.length})
-                        </button>
-                    </nav>
+                    </div>
                 </div>
             </header>
 

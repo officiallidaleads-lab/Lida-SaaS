@@ -42,9 +42,16 @@ export const LeadService = {
     },
 
     saveLead: async (lead: Omit<Lead, 'id' | 'date_added'>): Promise<Lead | null> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+            console.error('User must be logged in to save leads');
+            return null;
+        }
+
         const { data, error } = await supabase
             .from('leads')
-            .insert([lead])
+            .insert([{ ...lead, user_id: user.id }])
             .select()
             .single();
 
