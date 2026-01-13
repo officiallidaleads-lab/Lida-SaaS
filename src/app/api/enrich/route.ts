@@ -14,8 +14,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. Select Model (Using Gemini 2.0 Flash as per 2026 standards)
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        // 1. Select Model - Using 'gemini-pro' as it is the most stable v1 model
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
         // 2. Construct Prompt
         const prompt = `
@@ -35,7 +35,9 @@ export async function POST(request: Request) {
         `;
 
         // 3. Generate Content
+        console.log("Creating generation request...");
         const result = await model.generateContent(prompt);
+        console.log("Received response from Gemini");
         const response = await result.response;
         const text = response.text();
 
@@ -47,9 +49,12 @@ export async function POST(request: Request) {
         return NextResponse.json(data);
 
     } catch (error: any) {
-        console.error("Gemini Error:", error);
+        console.error("Gemini API Error Detail:", JSON.stringify(error, null, 2));
+        if (error.response) {
+             console.error("Gemini Response Error:", await error.response.text());
+        }
         return NextResponse.json(
-            { error: "Failed to enrich data" },
+            { error: "Failed to enrich data", details: error.message },
             { status: 500 }
         );
     }
