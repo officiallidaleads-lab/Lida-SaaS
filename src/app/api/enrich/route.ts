@@ -32,48 +32,61 @@ export async function POST(request: Request) {
             }
         `;
 
-        // 2. Call Gemini REST API with Model Fallback Strategy
-        // We try multiple models in order of preference to handle 404s (availability) or 429s (rate limits)
-        const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+        // 2. Call Gemini REST API with Smart Retry Strategy
+        // gemini-2.0-flash is the only model confirmed to exist (others return 404), 
+        // so we focus on retrying it when we hit Rate Limits (429).
+        const models = ['gemini-2.0-flash']; 
         const apiKey = process.env.GEMINI_API_KEY;
         
-        let lastError = null;
         let successResponse = null;
+        let lastError = null;
 
         for (const model of models) {
-            try {
-                console.log(`Attempting enrichment with model: ${model}...`);
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            // We allow up to 3 attempts (Initial + 2 Retries) for the primary model
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    console.log(`Attempting enrichment with model: ${model} (Attempt ${attempt})...`);
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: promptText }] }]
-                    })
-                });
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: promptText }] }]
+                        })
+                    });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    // If rate limited (429) or not found (404), throw to try next model
-                    // For other errors (500), we might also want to retry, so we treat all non-ok as try-next
-                    throw new Error(`${response.status} ${response.statusText} - ${errorText}`);
+                    if (response.status === 429) {
+                        console.warn(`Rate limit hit for ${model}. Waiting to retry...`);
+                        // Wait 5 seconds before retrying (exponentialish backoff could be better but keep it simple)
+                        await new Promise(resolve => setTimeout(resolve, 5000 * attempt));
+                        continue; // Try again
+                    }
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`${response.status} ${response.statusText} - ${errorText}`);
+                    }
+
+                    successResponse = await response.json();
+                    console.log(`Success with model: ${model}`);
+                    break; // Exit retry loop
+
+                } catch (error: any) {
+                    console.warn(`Failed with ${model}:`, error.message);
+                    lastError = error;
+                    // If it's not a 429 (caught above), we might break or continue depending on error type
+                    // For now, we continue to next attempt if appropriate, or break if it's fatal
+                    if (!error.message.includes('429')) break; 
                 }
-
-                successResponse = await response.json();
-                console.log(`Success with model: ${model}`);
-                break; // Exit loop on success
-
-            } catch (error: any) {
-                console.warn(`Failed with ${model}:`, error.message);
-                lastError = error;
-                // Continue to next model
             }
+            
+            if (successResponse) break; // Exit model loop if successful
         }
 
         if (!successResponse) {
-            console.error("All Gemini models failed.");
-            throw lastError || new Error("All models failed");
+            console.error("Gemini API failed after retries.");
+            throw lastError || new Error("Enrichment failed after retries");
         }
         
         const result = successResponse;
@@ -87,7 +100,6 @@ export async function POST(request: Request) {
         const data = JSON.parse(cleanedText);
 
         return NextResponse.json(data);
-
     } catch (error: any) {
         console.error("Enrichment Error:", error);
         return NextResponse.json(
