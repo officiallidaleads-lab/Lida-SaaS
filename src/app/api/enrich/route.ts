@@ -33,11 +33,11 @@ export async function POST(request: Request) {
         `;
 
         // 2. Call Gemini REST API directly (Bypassing SDK to avoid version issues)
-        // Using gemini-1.5-flash which is the current stable standard
+        // Using gemini-2.0-flash as per user's working cURL example
         const apiKey = process.env.GEMINI_API_KEY;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
-        console.log("Sending request to Gemini REST API...");
+        console.log("Sending request to Gemini REST API (gemini-2.0-flash)...");
 
         const response = await fetch(apiUrl, {
             method: 'POST',
