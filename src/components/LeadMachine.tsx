@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Globe, MapPin, Building2, Save, Trash2, ExternalLink, Bot, CheckCircle, Smartphone, Mail, Loader2 } from 'lucide-react';
+import { Search, Globe, MapPin, Building2, Save, Trash2, ExternalLink, Bot, CheckCircle, Smartphone, Mail, Loader2, X, Zap, Lock } from 'lucide-react';
 import { LeadService, Lead, supabase, UsageService, PLAN_LIMITS } from '@/lib/storage';
 import Auth from './Auth';
 import Upgrade from './Upgrade';
@@ -16,6 +16,8 @@ export default function LeadMachine() {
     // Usage State
     const [usage, setUsage] = useState<any>(null);
     const [plan, setPlan] = useState('free');
+    const [showLimitModal, setShowLimitModal] = useState(false);
+    const [limitMessage, setLimitMessage] = useState('');
     
     // Search Filters
     const [platform, setPlatform] = useState('linkedin.com');
@@ -78,7 +80,8 @@ const [session, setSession] = useState<any>(null);
         // Enforce Search Limit
         const check = await UsageService.checkAndIncrement('search');
         if (!check.allowed) {
-            alert(check.error || 'Limit Reached');
+            setLimitMessage(check.error || 'Daily search limit reached.');
+            setShowLimitModal(true);
             return;
         }
         await loadUsage(); // Re-fetch usage to update UI
@@ -112,7 +115,8 @@ const [session, setSession] = useState<any>(null);
         // Enforce Save Limit
         const check = await UsageService.checkAndIncrement('save');
         if (!check.allowed) {
-            alert(check.error || 'Limit Reached');
+            setLimitMessage(check.error || 'Daily save limit reached.');
+            setShowLimitModal(true);
             return;
         }
         await loadUsage();
@@ -443,6 +447,50 @@ const [session, setSession] = useState<any>(null);
                     </div>
                 )}
             </main>
+
+            {/* Limit Reached Modal */}
+            {showLimitModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setShowLimitModal(false)}
+                            className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                                <Lock className="w-6 h-6 text-amber-600" />
+                            </div>
+                            
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">Limit Reached</h3>
+                            <p className="text-slate-500 mb-6">
+                                {limitMessage} <br/>
+                                Upgrade to <b>Pro</b> for 1,000+ daily searches.
+                            </p>
+
+                            <button
+                                onClick={() => {
+                                    setShowLimitModal(false);
+                                    setView('upgrade');
+                                }}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+                            >
+                                <Zap className="w-5 h-5" />
+                                Upgrade Now
+                            </button>
+                            
+                            <button 
+                                onClick={() => setShowLimitModal(false)}
+                                className="mt-3 text-slate-400 hover:text-slate-600 text-sm font-medium"
+                            >
+                                Maybe Later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
