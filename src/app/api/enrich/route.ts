@@ -10,21 +10,35 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
 
-        // 1. Extract domain from URL for smart predictions
+        // 1. Extract actual company domain from snippet (NOT the search result URL!)
+        // The URL is often facebook.com/linkedin.com, which is useless for email prediction
         let domain = '';
-        try {
-            const urlObj = new URL(url);
-            domain = urlObj.hostname.replace('www.', '');
-        } catch (e) {
-            console.warn("Invalid URL, using company name for email prediction");
-        }
+        
+        // Try to find actual company domains in the snippet (e.g., almondestateltd.co.ke)
+        const domainPattern = /(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)/g;
+        const domainsInSnippet = snippet.match(domainPattern) || [];
+        
+        // Filter out social media domains
+        const socialDomains = ['facebook.com', 'linkedin.com', 'instagram.com', 'twitter.com', 'x.com', 'tiktok.com'];
+        const companyDomains = domainsInSnippet
+            .map((d: string) => d.replace(/^https?:\/\/(www\.)?/, ''))
+            .filter((d: string) => !socialDomains.some(social => d.includes(social)));
+        
+        domain = companyDomains[0] || ''; // Use first company domain found
+        
+        console.log("Domain extraction:", { url, domainsInSnippet, companyDomains, selectedDomain: domain });
 
-        // 2. PRE-EXTRACTION: Use regex to find emails and phones in snippet (AI sometimes misses these!)
+        // 2. PRE-EXTRACTION: Use regex to find emails and phones in snippet
         const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
-        const phonePattern = /(\+?\d{1,4}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}[-.\s]?\d{0,4}/g;
+        
+        // Improved phone pattern for Kenyan numbers: 07XX XXX XXX, +254 7XX XXX XXX, etc.
+        const phonePattern = /(?:\+254|0)[\s-]?[17]\d{1,2}[\s-]?\d{3}[\s-]?\d{3,4}|\d{4}[\s-]?\d{6}/g;
         
         const extractedEmails = snippet.match(emailPattern) || [];
-        const extractedPhones = snippet.match(phonePattern)?.filter((p: string) => p.replace(/\D/g, '').length >= 7) || [];
+        const extractedPhones = snippet.match(phonePattern)?.filter((p: string) => {
+            const digits = p.replace(/\D/g, '');
+            return digits.length >= 9 && digits.length <= 13; // Valid phone number length
+        }) || [];
         
         console.log("Regex extraction:", { extractedEmails, extractedPhones });
 
