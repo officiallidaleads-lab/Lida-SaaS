@@ -20,6 +20,14 @@ export const metadata: Metadata = {
   description: "Find and manage leads with AI-powered search",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+};
+
+
 export default function RootLayout({
   children,
 }: Readonly<{
