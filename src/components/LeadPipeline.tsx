@@ -49,6 +49,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
     const [noteText, setNoteText] = useState('');
     const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
     const [compactMode, setCompactMode] = useState(true); // Start in compact mode
+    const [updatingStage, setUpdatingStage] = useState(false);
 
     const groupedLeads = leads.reduce((acc, lead) => {
         const stage = lead.status || 'new';
@@ -73,7 +74,11 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
     };
 
     const handleStageChange = async (lead: Lead, newStage: PipelineStage) => {
+        setUpdatingStage(true);
         await onUpdateLead(lead.id, { status: newStage });
+        // Small delay to ensure database update propagates
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setUpdatingStage(false);
         // Close the card after stage change for immediate visual feedback
         setSelectedLead(null);
     };
@@ -169,7 +174,9 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                     <div className="border-t border-slate-200 pt-4 mt-4 space-y-4">
                         {/* Stage Changer */}
                         <div>
-                            <label className="text-xs font-semibold text-slate-700 mb-2 block">Move to Stage:</label>
+                            <label className="text-xs font-semibold text-slate-700 mb-2 block">
+                                {updatingStage ? '⏳ Updating...' : 'Move to Stage:'}
+                            </label>
                             <div className="flex gap-2 flex-wrap">
                                 {Object.entries(STAGE_CONFIG).map(([stage, config]) => (
                                     <button
@@ -178,11 +185,12 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                                             e.stopPropagation();
                                             handleStageChange(lead, stage as PipelineStage);
                                         }}
+                                        disabled={updatingStage}
                                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                             lead.status === stage
                                                 ? config.color + ' border-2'
                                                 : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:border-slate-300'
-                                        }`}
+                                        } ${updatingStage ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         {config.label}
                                     </button>

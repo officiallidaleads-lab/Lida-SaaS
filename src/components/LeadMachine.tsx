@@ -76,6 +76,8 @@ const [session, setSession] = useState<any>(null);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
+            console.log('🔄 Updating lead:', leadId, 'with:', updates);
+
             const { error } = await supabase
                 .from('leads')
                 .update(updates)
@@ -83,12 +85,15 @@ const [session, setSession] = useState<any>(null);
                 .eq('user_id', user.id);
 
             if (error) {
-                console.error('Error updating lead:', error);
+                console.error('❌ Error updating lead:', error);
                 return;
             }
 
+            console.log('✅ Lead updated successfully in database');
+
             // Reload leads to reflect changes
             await loadSavedLeads();
+            console.log('✅ Leads reloaded from database');
         } catch (error) {
             console.error('Failed to update lead:', error);
         }
