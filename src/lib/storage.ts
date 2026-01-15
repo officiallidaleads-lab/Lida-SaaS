@@ -24,8 +24,8 @@ export interface Lead {
     phone?: string;
     notes?: string;
     enrichment?: any;
-    date_added: string;
-    user_id?: string; // Optional for now until auth is fully moved
+    created_at: string;  // Supabase default timestamp
+    user_id?: string;
 }
 
 // Plan Limits Configuration
@@ -115,10 +115,10 @@ export const LeadService = {
         }
 
         const { data, error } = await supabase
-            .from('saved_leads')
+            .from('leads')
             .select('*')
             .eq('user_id', user.id)
-            .order('date_added', { ascending: false });
+            .order('created_at', { ascending: false });
 
         if (error) {
             console.error('Error fetching leads:', error);
@@ -128,7 +128,7 @@ export const LeadService = {
         return data || [];
     },
 
-    saveLead: async (lead: Omit<Lead, 'id' | 'date_added'>): Promise<Lead | null> => {
+    saveLead: async (lead: Omit<Lead, 'id' | 'created_at'>): Promise<Lead | null> => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -136,12 +136,12 @@ export const LeadService = {
             return null;
         }
 
+        // Don't set created_at - Supabase has a default timestamp
         const { data, error } = await supabase
-            .from('saved_leads')
+            .from('leads')
             .insert([{ 
                 ...lead, 
-                user_id: user.id,
-                date_added: new Date().toISOString() // Explicitly set current date
+                user_id: user.id
             }])
             .select()
             .single();
@@ -155,7 +155,7 @@ export const LeadService = {
 
     deleteLead: async (id: string): Promise<void> => {
         const { error } = await supabase
-            .from('saved_leads')
+            .from('leads')
             .delete()
             .eq('id', id);
         

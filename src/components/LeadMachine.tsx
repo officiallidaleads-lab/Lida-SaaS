@@ -77,7 +77,7 @@ const [session, setSession] = useState<any>(null);
             if (!user) return;
 
             const { error } = await supabase
-                .from('saved_leads')
+                .from('leads')
                 .update(updates)
                 .eq('id', leadId)
                 .eq('user_id', user.id);

@@ -207,7 +207,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                 {/* Footer - Date */}
                 <div className="flex items-center gap-2 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100">
                     <Calendar className="w-3 h-3" />
-                    <span>Added {new Date(lead.date_added).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span>Added {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                 </div>
             </div>
         );
