@@ -27,11 +27,13 @@ export default function LeadMachine() {
     const [page, setPage] = useState(1);
 
 const [session, setSession] = useState<any>(null);
+    const [authLoading, setAuthLoading] = useState(true);
 
     useEffect(() => {
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
+            setAuthLoading(false);
             if (session) {
                 loadSavedLeads();
                 loadUsage();
@@ -43,6 +45,7 @@ const [session, setSession] = useState<any>(null);
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
+            setAuthLoading(false);
             if (session) {
                 loadSavedLeads();
                 loadUsage();
@@ -117,7 +120,12 @@ const [session, setSession] = useState<any>(null);
             const res = await axios.get(`/api/search?query=${encodeURIComponent(query)}&start=${start}`);
             
             if (res.data.items) {
-                setResults(res.data.items);
+                // Attach current platform to each result to avoid confusion when toggling
+                const resultsWithPlatform = res.data.items.map((r: any) => ({
+                    ...r,
+                    searchedPlatform: platform
+                }));
+                setResults(resultsWithPlatform);
             }
         } catch (error) {
             console.error(error);
@@ -185,6 +193,15 @@ const [session, setSession] = useState<any>(null);
             console.error(error);
         }
     };
+
+    // Show loading state while checking auth (prevents flash)
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     if (!session) {
         return <Auth />;
@@ -334,7 +351,6 @@ const [session, setSession] = useState<any>(null);
                                         <tr className="bg-slate-50 border-b border-slate-200">
                                             <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Company / Title</th>
                                             <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Platform</th>
-                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Status</th>
                                             <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase text-right">Actions</th>
                                         </tr>
                                     </thead>
@@ -378,12 +394,7 @@ const [session, setSession] = useState<any>(null);
                                                 </td>
                                                 <td className="py-4 px-6">
                                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 capitalize">
-                                                        {platform.split('.')[0]}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                                                        New Found
+                                                        {item.searchedPlatform?.split('.')[0] || 'unknown'}
                                                     </span>
                                                 </td>
                                                 <td className="py-4 px-6 text-right">
