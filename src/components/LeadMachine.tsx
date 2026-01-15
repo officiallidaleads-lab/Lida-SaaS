@@ -473,7 +473,14 @@ const [session, setSession] = useState<any>(null);
                                             </a>
                                         </td>
                                         <td className="py-4 px-6 text-sm text-slate-500">
-                                            {new Date(lead.date_added).toLocaleDateString()}
+                                            {lead.date_added 
+                                                ? new Date(lead.date_added).toLocaleDateString('en-US', { 
+                                                    year: 'numeric', 
+                                                    month: 'short', 
+                                                    day: 'numeric' 
+                                                })
+                                                : 'Just now'
+                                            }
                                         </td>
                                         <td className="py-4 px-6 text-right">
                                             <button 

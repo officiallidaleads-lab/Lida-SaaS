@@ -130,7 +130,11 @@ export const LeadService = {
 
         const { data, error } = await supabase
             .from('leads')
-            .insert([{ ...lead, user_id: user.id }])
+            .insert([{ 
+                ...lead, 
+                user_id: user.id,
+                date_added: new Date().toISOString() // Explicitly set current date
+            }])
             .select()
             .single();
 
