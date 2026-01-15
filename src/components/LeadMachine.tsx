@@ -7,6 +7,7 @@ import { LeadService, Lead, supabase, UsageService, PLAN_LIMITS } from '@/lib/st
 import Auth from './Auth';
 import Upgrade from './Upgrade';
 import LeadPipeline from './LeadPipeline';
+import toast from 'react-hot-toast';
 
 export default function LeadMachine() {
     const [view, setView] = useState<'search' | 'leads' | 'upgrade'>('search');
@@ -85,27 +86,41 @@ const [session, setSession] = useState<any>(null);
 
             if (error) {
                 console.error('Update error:', error.message);
+                toast.error('Failed to update lead');
                 return;
             }
 
             if (!data || data.length === 0) {
                 console.error('No rows updated');
+                toast.error('Failed to update lead');
                 return;
+            }
+
+            // Show success message based on what was updated
+            if (updates.status) {
+                toast.success('Lead moved to new stage');
+            } else if (updates.notes !== undefined) {
+                toast.success('Note saved successfully');
+            } else {
+                toast.success('Lead updated');
             }
 
             // Reload leads to reflect changes
             await loadSavedLeads();
         } catch (error) {
             console.error('Update failed:', error);
+            toast.error('Something went wrong');
         }
     };
 
     const handleDeleteLead = async (leadId: string) => {
         try {
             await LeadService.deleteLead(leadId);
+            toast.success('Lead deleted');
             await loadSavedLeads();
         } catch (error) {
             console.error('Failed to delete lead:', error);
+            toast.error('Failed to delete lead');
         }
     };
 
@@ -165,10 +180,14 @@ const [session, setSession] = useState<any>(null);
                     searchedPlatform: platform
                 }));
                 setResults(resultsWithPlatform);
+                toast.success(`Found ${resultsWithPlatform.length} leads`);
+            } else {
+                toast.error('No results found');
             }
         } catch (error) {
             console.error(error);
             setError('Search failed. Please try again later.');
+            toast.error('Search failed');
         } finally {
             setLoading(false);
         }
@@ -178,8 +197,7 @@ const [session, setSession] = useState<any>(null);
         // Prevent duplicate saves locally first
         const isDuplicate = savedLeads.some(lead => lead.url === item.link);
         if (isDuplicate) {
-            setError('This lead is already saved!');
-            setTimeout(() => setError(null), 3000);
+            toast.error('Lead already saved');
             return;
         }
 
@@ -196,10 +214,10 @@ const [session, setSession] = useState<any>(null);
 
         const lead = {
             company_name: item.title,
-            niche,
-            location,
+            niche: niche,
+            location: location,
             url: item.link,
-            platform,
+            platform: item.searchedPlatform || platform,
             snippet: item.snippet,
             status: 'new' as const
         };
