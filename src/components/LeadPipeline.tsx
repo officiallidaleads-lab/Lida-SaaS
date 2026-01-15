@@ -209,77 +209,85 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
     };
 
     return (
-        <div className="h-[calc(100vh-140px)] flex flex-col">
-            {/* Toolbar */}
-            <div className="flex justify-between items-center mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <Columns className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Lead Pipeline
+        <div className="h-[calc(100vh-140px)] md:h-[calc(100vh-140px)] flex flex-col">
+            {/* Mobile-First Toolbar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 bg-white dark:bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+                 <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                    <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <Columns className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
+                        <span className="hidden sm:inline">Lead Pipeline</span>
+                        <span className="sm:hidden">Pipeline</span>
                     </h2>
-                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
-                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                    <div className="h-5 sm:h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-lg">
                         <button
                             onClick={() => setViewMode('pipeline')}
-                            className={`p-1.5 rounded-md transition-all ${viewMode === 'pipeline' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                            className={`p-1 sm:p-1.5 rounded-md transition-all ${viewMode === 'pipeline' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                            aria-label="Pipeline view"
                         >
-                            <Columns className="w-4 h-4" />
+                            <Columns className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                         <button
                             onClick={() => setViewMode('list')}
-                            className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                            className={`p-1 sm:p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                            aria-label="List view"
                         >
-                            <List className="w-4 h-4" />
+                            <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                     </div>
                     
                     <button
                         onClick={() => setCompactMode(!compactMode)}
-                        className="p-2 ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+                        className="p-1.5 sm:p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors hidden sm:block"
                         title={compactMode ? "Expand Cards" : "Compact Cards"}
+                        aria-label={compactMode ? "Expand Cards" : "Compact Cards"}
                     >
                          {compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
                     </button>
                  </div>
 
-                 <div className="flex gap-2">
+                 {/* Close Detail - Only shows X icon when detail is active */}
+                 {selectedLead && (
                      <button
                         onClick={() => setSelectedLead(null)}
-                        className="text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 underline decoration-slate-300 dark:decoration-slate-600 underline-offset-4"
+                        className="absolute top-3 right-3 sm:relative sm:top-auto sm:right-auto p-2 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all"
+                        aria-label="Close detail"
                      >
-                         Close Detail
+                         <X className="w-4 h-4 sm:w-5 sm:h-5" />
                      </button>
-                 </div>
+                 )}
             </div>
 
-            <div className="flex-1 flex gap-6 overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row gap-0 md:gap-6 overflow-hidden relative">
                 {/* Pipeline Board */}
-                <div className={`flex-1 overflow-x-auto pb-4 ${selectedLead ? 'w-2/3 max-w-[66%]' : 'w-full'} transition-all duration-300`}>
-                    <div className="flex gap-4 min-w-[1000px] h-full">
+                <div className={`flex-1 overflow-x-auto pb-4 transition-all duration-300 ${selectedLead ? 'hidden md:block md:w-2/3 md:max-w-[66%]' : 'w-full'}`}>
+                    <div className="flex gap-3 sm:gap-4 min-w-[280px] sm:min-w-[800px] md:min-w-[1000px] h-full">
                         {(Object.entries(STAGE_CONFIG) as [PipelineStage, typeof STAGE_CONFIG[PipelineStage]][]).map(([stageKey, config]) => {
                             const stageLeads = leads.filter(l => l.status === stageKey);
                             const Icon = config.icon;
 
                             return (
-                                <div key={stageKey} className="flex-1 min-w-[280px] flex flex-col h-full">
+                                <div key={stageKey} className="flex-1 min-w-[140px] sm:min-w-[200px] md:min-w-[280px] flex flex-col h-full">
                                     {/* Column Header */}
                                     <div className={`
-                                        flex items-center justify-between p-3 rounded-t-xl border-b-2
+                                        flex items-center justify-between p-2 sm:p-3 rounded-t-xl border-b-2 text-xs sm:text-sm
                                         ${config.color.replace('bg-', 'bg-opacity-20 ')}
                                     `}>
-                                        <div className="flex items-center gap-2 font-semibold">
-                                            <Icon className="w-4 h-4 opacity-70" />
-                                            {config.label}
-                                            <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold ml-2">
+                                        <div className="flex items-center gap-1.5 sm:gap-2 font-semibold">
+                                            <Icon className="w-3 h-3 sm:w-4 sm:h-4 opacity-70" />
+                                            <span className="hidden sm:inline">{config.label}</span>
+                                            <span className="sm:hidden text-[10px]">{config.label.split(' ')[0]}</span>
+                                            <span className="bg-white/50 dark:bg-black/20 px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold">
                                                 {stageLeads.length}
                                             </span>
                                         </div>
                                     </div>
 
                                     {/* Column Body */}
-                                    <div className="flex-1 bg-slate-50/50 dark:bg-slate-900/50 border-x border-b border-slate-200 dark:border-slate-800 rounded-b-xl p-3 overflow-y-auto custom-scrollbar">
+                                    <div className="flex-1 bg-slate-50/50 dark:bg-slate-900/50 border-x border-b border-slate-200 dark:border-slate-800 rounded-b-xl p-2 sm:p-3 overflow-y-auto custom-scrollbar">
                                         {stageLeads.length === 0 ? (
-                                            <div className="h-32 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
-                                                <small>No leads</small>
+                                            <div className="h-24 sm:h-32 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+                                                <small className="text-[10px] sm:text-xs">No leads</small>
                                             </div>
                                         ) : (
                                             <AnimatePresence mode='popLayout'>
@@ -304,19 +312,20 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                     </div>
                 </div>
 
-                {/* Detail Panel */}
+                {/* Detail Panel - Full screen on mobile, right-aligned on desktop */}
                 <AnimatePresence>
                 {selectedLead && (
                     <motion.div
-                        initial={{ x: 300, opacity: 0 }}
+                        initial={{ x: '100%', opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        exit={{ x: 300, opacity: 0 }}
-                        className="w-1/3 min-w-[400px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl z-20 h-full flex flex-col rounded-l-2xl overflow-hidden"
+                        exit={{ x: '100%', opacity: 0 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="fixed md:relative inset-0 md:inset-auto md:w-1/3 md:min-w-[350px] lg:min-w-[400px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl z-50 md:z-20 h-full flex flex-col md:rounded-l-2xl overflow-hidden"
                     >
                         {/* Detail Header */}
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                            <div className="flex justify-between items-start mb-4">
-                                <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-snug pr-8">
+                        <div className="p-4 sm:p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex justify-between items-start mb-3 sm:mb-4">
+                                <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-white leading-snug pr-8">
                                     {selectedLead.company_name}
                                 </h2>
                                 <button
