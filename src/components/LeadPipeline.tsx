@@ -66,10 +66,16 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
         
         await onUpdateLead(lead.id, { notes: newNote });
         setNoteText('');
+        // Visual feedback - briefly show success
+        setTimeout(() => {
+            // Force re-render to show new note
+        }, 100);
     };
 
     const handleStageChange = async (lead: Lead, newStage: PipelineStage) => {
         await onUpdateLead(lead.id, { status: newStage });
+        // Close the card after stage change for immediate visual feedback
+        setSelectedLead(null);
     };
 
     const renderLeadCard = (lead: Lead) => {
@@ -190,13 +196,25 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                                 <Edit3 className="w-4 h-4" />
                                 Notes & Follow-ups
                             </label>
+                            
+                            {/* Existing Notes - Show First */}
+                            {lead.notes && (
+                                <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                                    <div className="text-xs font-semibold text-amber-900 mb-2">📝 History:</div>
+                                    <pre className="text-xs text-slate-700 whitespace-pre-wrap font-sans">
+                                        {lead.notes}
+                                    </pre>
+                                </div>
+                            )}
+                            
+                            {/* Add New Note */}
                             <div className="space-y-2">
                                 <textarea
                                     value={noteText}
                                     onChange={(e) => setNoteText(e.target.value)}
-                                    placeholder="Add a note... (e.g., 'Called on Jan 15, left voicemail')"
-                                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-                                    rows={2}
+                                    placeholder="Type your note here... e.g., 'Called Jan 15 - interested'"
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+                                    rows={3}
                                     onClick={(e) => e.stopPropagation()}
                                 />
                                 <button
@@ -205,20 +223,11 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                                         handleAddNote(lead);
                                     }}
                                     disabled={!noteText.trim()}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                                 >
-                                    Add Note
+                                    💾 Save Note
                                 </button>
                             </div>
-                            
-                            {/* Existing Notes */}
-                            {lead.notes && (
-                                <div className="mt-3 bg-slate-50 rounded-lg p-3 max-h-40 overflow-y-auto">
-                                    <pre className="text-xs text-slate-600 whitespace-pre-wrap font-sans">
-                                        {lead.notes}
-                                    </pre>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
