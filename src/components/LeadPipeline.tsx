@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { Lead } from '@/lib/storage';
 import { 
-    Mail, Phone, Linkedin, MessageSquare, Clock, Star, 
+    Mail, Phone, MessageSquare, Clock,
     Calendar, ExternalLink, Tag, CheckCircle, XCircle,
-    ArrowRight, Edit3, Trash2, Plus, Filter
+    Edit3, Trash2, Plus, Minimize2, Maximize2
 } from 'lucide-react';
 
 interface LeadPipelineProps {
@@ -48,6 +48,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
     const [noteText, setNoteText] = useState('');
     const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
+    const [compactMode, setCompactMode] = useState(true); // Start in compact mode
 
     const groupedLeads = leads.reduce((acc, lead) => {
         const stage = lead.status || 'new';
@@ -73,6 +74,24 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
 
     const renderLeadCard = (lead: Lead) => {
         const isSelected = selectedLead?.id === lead.id;
+        
+        // Compact mode: Show minimal info until clicked
+        if (compactMode && !isSelected) {
+            return (
+                <div 
+                    key={lead.id}
+                    className="bg-white rounded-lg border border-slate-200 p-3 mb-2 cursor-pointer transition-all hover:shadow-md hover:border-blue-300"
+                    onClick={() => setSelectedLead(lead)}
+                >
+                    <h3 className="font-semibold text-slate-900 text-sm line-clamp-1">{lead.company_name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-500">{lead.niche}</span>
+                        {lead.email && <Mail className="w-3 h-3 text-blue-500" />}
+                        {lead.phone && <Phone className="w-3 h-3 text-green-500" />}
+                    </div>
+                </div>
+            );
+        }
         
         return (
             <div 
@@ -218,12 +237,21 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
             <div className="space-y-4">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-slate-900">My Leads ({leads.length})</h2>
-                    <button
-                        onClick={() => setViewMode('pipeline')}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                    >
-                        Pipeline View
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCompactMode(!compactMode)}
+                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 flex items-center gap-2"
+                        >
+                            {compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+                            {compactMode ? 'Expand' : 'Compact'}
+                        </button>
+                        <button
+                            onClick={() => setViewMode('pipeline')}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                        >
+                            Pipeline View
+                        </button>
+                    </div>
                 </div>
                 <div className="grid gap-4">
                     {leads.map(renderLeadCard)}
@@ -240,12 +268,21 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                     <h2 className="text-2xl font-bold text-slate-900">Lead Pipeline</h2>
                     <p className="text-sm text-slate-500 mt-1">Manage your sales pipeline & track progress</p>
                 </div>
-                <button
-                    onClick={() => setViewMode('list')}
-                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200"
-                >
-                    List View
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setCompactMode(!compactMode)}
+                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 flex items-center gap-2"
+                    >
+                        {compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+                        {compactMode ? 'Expand Cards' : 'Compact'}
+                    </button>
+                    <button
+                        onClick={() => setViewMode('list')}
+                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200"
+                    >
+                        List View
+                    </button>
+                </div>
             </div>
 
             {/* Pipeline Columns */}
@@ -256,9 +293,9 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                     const Icon = config.icon;
 
                     return (
-                        <div key={stage} className="bg-slate-50 rounded-xl p-4">
+                        <div key={stage} className="bg-slate-50 rounded-xl p-4 flex flex-col" style={{ maxHeight: '80vh' }}>
                             {/* Column Header */}
-                            <div className="flex items-center gap-2 mb-4">
+                            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
                                 <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
                                     <Icon className="w-4 h-4" />
                                 </div>
@@ -268,8 +305,8 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                                 </div>
                             </div>
 
-                            {/* Cards */}
-                            <div className="space-y-3">
+                            {/* Cards - Scrollable */}
+                            <div className="flex-1 overflow-y-auto space-y-3 pr-2" style={{ minHeight: '200px' }}>
                                 {stageLeads.length === 0 ? (
                                     <div className="text-center py-8 text-slate-400 text-sm">
                                         No leads yet
@@ -280,7 +317,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                             </div>
                         </div>
                     );
-                })}
+                })}{
             </div>
         </div>
     );
