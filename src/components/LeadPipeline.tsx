@@ -317,7 +317,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                             </div>
                         </div>
                     );
-                })}{
+                })}
             </div>
         </div>
     );
