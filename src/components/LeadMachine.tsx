@@ -6,6 +6,7 @@ import { Search, Globe, MapPin, Building2, Save, Trash2, ExternalLink, Bot, Chec
 import { LeadService, Lead, supabase, UsageService, PLAN_LIMITS } from '@/lib/storage';
 import Auth from './Auth';
 import Upgrade from './Upgrade';
+import LeadPipeline from './LeadPipeline';
 
 export default function LeadMachine() {
     const [view, setView] = useState<'search' | 'leads' | 'upgrade'>('search');
@@ -67,6 +68,38 @@ const [session, setSession] = useState<any>(null);
         if (status) {
             setPlan(status.plan);
             setUsage(status.usage);
+        }
+    };
+
+    const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { error } = await supabase
+                .from('leads')
+                .update(updates)
+                .eq('id', leadId)
+                .eq('user_id', user.id);
+
+            if (error) {
+                console.error('Error updating lead:', error);
+                return;
+            }
+
+            // Reload leads to reflect changes
+            await loadSavedLeads();
+        } catch (error) {
+            console.error('Failed to update lead:', error);
+        }
+    };
+
+    const handleDeleteLead = async (leadId: string) => {
+        try {
+            await LeadService.deleteLead(leadId);
+            await loadSavedLeads();
+        } catch (error) {
+            console.error('Failed to delete lead:', error);
         }
     };
 
