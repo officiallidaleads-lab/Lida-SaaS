@@ -74,46 +74,29 @@ const [session, setSession] = useState<any>(null);
     const handleUpdateLead = async (leadId: string, updates: Partial<Lead>) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                console.error('❌ No user found');
-                return;
-            }
-
-            console.log('🔄 Updating lead:', leadId, 'with:', updates);
-            console.log('👤 User ID:', user.id);
+            if (!user) return;
 
             const { data, error } = await supabase
                 .from('leads')
                 .update(updates)
                 .eq('id', leadId)
                 .eq('user_id', user.id)
-                .select(); // IMPORTANT: Get returned data to verify update
+                .select();
 
             if (error) {
-                console.error('❌ Supabase error:', error);
-                console.error('❌ Error code:', error.code);
-                console.error('❌ Error message:', error.message);
-                console.error('❌ Error details:', error.details);
-                alert(`Failed to update: ${error.message}`);
+                console.error('Update error:', error.message);
                 return;
             }
 
             if (!data || data.length === 0) {
-                console.error('❌ No rows updated! Lead might not exist or user_id mismatch');
-                console.error('Lead ID:', leadId);
-                console.error('User ID:', user.id);
-                alert('Failed to update lead. No matching record found.');
+                console.error('No rows updated');
                 return;
             }
 
-            console.log('✅ Lead updated successfully:', data);
-
             // Reload leads to reflect changes
             await loadSavedLeads();
-            console.log('✅ Leads reloaded from database');
         } catch (error) {
-            console.error('❌ Exception:', error);
-            alert(`Update failed: ${error}`);
+            console.error('Update failed:', error);
         }
     };
 
