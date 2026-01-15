@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/storage';
 import { Mail, Loader2, ShieldCheck, Zap, Globe, Lock, User } from 'lucide-react';
 
 export default function Auth() {
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'signin' | 'signup'>('signin');
     const [email, setEmail] = useState('');
@@ -19,12 +21,14 @@ export default function Auth() {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.location.origin}/`,
+                    redirectTo: `${window.location.origin}/dashboard`,
                 }
             });
             if (error) throw error;
+            // OAuth redirect happens automatically
         } catch (error: any) {
-            setError(error.message);
+            console.error('Google OAuth error:', error);
+            setError(error.message || 'Failed to sign in with Google. Please try again.');
             setLoading(false);
         }
     };
@@ -33,26 +37,56 @@ export default function Auth() {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        setSuccess(null);
+        
         try {
             if (mode === 'signup') {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/dashboard`,
+                    }
                 });
+                
                 if (error) throw error;
-                // Immediate success feedback
-                setSuccess('Account created! Logging you in...');
-                setTimeout(() => window.location.reload(), 1500);
+                
+                // Check if email confirmation is required
+                if (data?.user && !data.session) {
+                    setSuccess('Please check your email to confirm your account.');
+                    setLoading(false);
+                } else {
+                    // Auto sign-in successful
+                    setSuccess('Account created! Redirecting...');
+                    setTimeout(() => router.push('/dashboard'), 1000);
+                }
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
+                
                 if (error) throw error;
-                window.location.reload();
+                
+                setSuccess('Signed in! Redirecting...');
+                setTimeout(() => router.push('/dashboard'), 1000);
             }
         } catch (error: any) {
-            setError(error.message);
+            console.error('Email auth error:', error);
+            
+            // User-friendly error messages
+            let errorMessage = 'Authentication failed. Please try again.';
+            if (error.message?.includes('Invalid login credentials')) {
+                errorMessage = 'Invalid email or password. Please try again.';
+            } else if (error.message?.includes('Email not confirmed')) {
+                errorMessage = 'Please confirm your email before signing in.';
+            } else if (error.message?.includes('User already registered')) {
+                errorMessage = 'This email is already registered. Try signing in instead.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            setError(errorMessage);
             setLoading(false);
         }
     };
