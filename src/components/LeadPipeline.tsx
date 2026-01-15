@@ -50,7 +50,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
     const [viewMode, setViewMode] = useState<'pipeline' | 'list'>('pipeline');
     const [compactMode, setCompactMode] = useState(true);
     const [updatingStage, setUpdatingStage] = useState(false);
-    const [editingNotes, setEditingNotes] = useState(false); // New: track if editing notes
+    const [editingNotes, setEditingNotes] = useState(false);
 
     const groupedLeads = leads.reduce((acc, lead) => {
         const stage = lead.status || 'new';
@@ -59,16 +59,16 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
         return acc;
     }, {} as Record<PipelineStage, Lead[]>);
 
-    const handleAddNote = async (lead: Lead) => {
-        if (!noteText.trim()) return;
-        
-        const existingNotes = lead.notes || '';
-        const timestamp = new Date().toLocaleString();
-        const newNote = `[${timestamp}] ${noteText}\n${existingNotes}`;
-        
-        await onUpdateLead(lead.id, { notes: newNote });
+    const handleSaveNote = async (lead: Lead) => {
+        // Save the note exactly as typed (no timestamps, no appending)
+        await onUpdateLead(lead.id, { notes: noteText.trim() });
         setNoteText('');
-        setEditingNotes(false); // Hide editor after save
+        setEditingNotes(false);
+    };
+
+    const handleEditNote = (lead: Lead) => {
+        setNoteText(lead.notes || '');
+        setEditingNotes(true);
     };
 
     const handleStageChange = async (lead: Lead, newStage: PipelineStage) => {
@@ -195,75 +195,77 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                             </div>
                         </div>
 
-                        {/* Notes Section - Discord Style */}
+                        {/* Notes Section - Clean & Minimal */}
                         <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <label className="text-xs font-semibold text-slate-700 flex items-center gap-2">
-                                    📝 Notes & Follow-ups
-                                </label>
-                                {!editingNotes && (
+                            <label className="text-xs font-semibold text-slate-700 mb-3 block">
+                                📝 Notes
+                            </label>
+                            
+                            {/* Empty State - Centered Pill */}
+                            {!editingNotes && !lead.notes && (
+                                <div className="flex justify-center py-3">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setEditingNotes(true);
                                             setNoteText('');
+                                            setEditingNotes(true);
                                         }}
-                                        className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors flex items-center gap-1"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
                                     >
-                                        <Plus className="w-3 h-3" />
                                         Add Note
                                     </button>
-                                )}
-                            </div>
+                                </div>
+                            )}
                             
-                            {/* Show Notes (Read-only) */}
+                            {/* Show Note (Read-only) */}
                             {!editingNotes && lead.notes && (
-                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto">
-                                    <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">
+                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 relative group">
+                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">
                                         {lead.notes}
-                                    </pre>
+                                    </p>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditNote(lead);
+                                        }}
+                                        className="absolute top-2 right-2 px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 transition-colors opacity-0 group-hover:opacity-100"
+                                    >
+                                        Edit
+                                    </button>
                                 </div>
                             )}
                             
-                            {/* Show Empty State */}
-                            {!editingNotes && !lead.notes && (
-                                <div className="bg-slate-50 border border-slate-200 border-dashed rounded-lg p-4 text-center">
-                                    <p className="text-sm text-slate-400 italic">No notes yet. Click &ldquo;Add Note&rdquo; to start tracking.</p>
-                                </div>
-                            )}
-                            
-                            {/* Editor (Only when editing) */}
+                            {/* Editor */}
                             {editingNotes && (
-                                <div className="space-y-2 bg-slate-50 border border-blue-300 rounded-lg p-3">
+                                <div className="space-y-2">
                                     <textarea
                                         value={noteText}
                                         onChange={(e) => setNoteText(e.target.value)}
-                                        placeholder="Type your note... e.g., 'Called Jan 15 - interested in our services'"
+                                        placeholder="Type your notes here..."
                                         className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-                                        rows={3}
+                                        rows={4}
                                         onClick={(e) => e.stopPropagation()}
                                         autoFocus
                                     />
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleAddNote(lead);
-                                            }}
-                                            disabled={!noteText.trim()}
-                                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                        >
-                                            💾 Save Note
-                                        </button>
+                                    <div className="flex gap-2 justify-end">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setEditingNotes(false);
                                                 setNoteText('');
                                             }}
-                                            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition-colors"
+                                            className="px-4 py-1.5 bg-slate-100 text-slate-700 rounded text-sm font-medium hover:bg-slate-200 transition-colors"
                                         >
                                             Cancel
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSaveNote(lead);
+                                            }}
+                                            className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors"
+                                        >
+                                            Save
                                         </button>
                                     </div>
                                 </div>
