@@ -41,25 +41,17 @@ export default function Auth() {
         
         try {
             if (mode === 'signup') {
-                const { data, error } = await supabase.auth.signUp({
+                const { error } = await supabase.auth.signUp({
                     email,
                     password,
-                    options: {
-                        emailRedirectTo: `${window.location.origin}/dashboard`,
-                    }
                 });
                 
                 if (error) throw error;
                 
-                // Check if email confirmation is required
-                if (data?.user && !data.session) {
-                    setSuccess('Please check your email to confirm your account.');
-                    setLoading(false);
-                } else {
-                    // Auto sign-in successful
-                    setSuccess('Account created! Redirecting...');
-                    setTimeout(() => router.push('/dashboard'), 1000);
-                }
+                // Email confirmation disabled - instant access
+                setSuccess('Account created! Redirecting to dashboard...');
+                setTimeout(() => router.push('/dashboard'), 800);
+                
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
@@ -68,8 +60,8 @@ export default function Auth() {
                 
                 if (error) throw error;
                 
-                setSuccess('Signed in! Redirecting...');
-                setTimeout(() => router.push('/dashboard'), 1000);
+                setSuccess('Welcome back! Redirecting...');
+                setTimeout(() => router.push('/dashboard'), 800);
             }
         } catch (error: any) {
             console.error('Email auth error:', error);
@@ -77,11 +69,11 @@ export default function Auth() {
             // User-friendly error messages
             let errorMessage = 'Authentication failed. Please try again.';
             if (error.message?.includes('Invalid login credentials')) {
-                errorMessage = 'Invalid email or password. Please try again.';
-            } else if (error.message?.includes('Email not confirmed')) {
-                errorMessage = 'Please confirm your email before signing in.';
+                errorMessage = 'Invalid email or password. Please check your credentials.';
             } else if (error.message?.includes('User already registered')) {
-                errorMessage = 'This email is already registered. Try signing in instead.';
+                errorMessage = 'This email is already registered. Please sign in instead.';
+            } else if (error.message?.includes('Password should be at least')) {
+                errorMessage = 'Password must be at least 6 characters long.';
             } else if (error.message) {
                 errorMessage = error.message;
             }
