@@ -172,18 +172,21 @@ const [session, setSession] = useState<any>(null);
         // Prevent duplicate saves locally first
         const isDuplicate = savedLeads.some(lead => lead.url === item.link);
         if (isDuplicate) {
-            // Optional: You could show a small "Already saved" toast here
+            setError('This lead is already saved!');
+            setTimeout(() => setError(null), 3000);
             return;
         }
 
-        // Enforce Save Limit
-        const check = await UsageService.checkAndIncrement('save');
-        if (!check.allowed) {
-            setLimitMessage(check.error || 'Daily save limit reached.');
+        // Check limit BEFORE attempting save (don't increment yet)
+        const status = await UsageService.getStatus();
+        if (!status) return;
+        
+        const limit = PLAN_LIMITS[status.plan as keyof typeof PLAN_LIMITS]?.saves || 0;
+        if (status.usage.saves_count >= limit) {
+            setLimitMessage('Daily save limit reached. Upgrade for more saves!');
             setShowLimitModal(true);
             return;
         }
-        await loadUsage();
 
         const lead = {
             company_name: item.title,
@@ -195,9 +198,18 @@ const [session, setSession] = useState<any>(null);
             status: 'new' as const
         };
         
-        // Optimistic update could happen here, but we'll wait for server
-        await LeadService.saveLead(lead);
-        await loadSavedLeads(); // Reload list
+        // Try to save first
+        const savedLead = await LeadService.saveLead(lead);
+        
+        // Only increment usage if save succeeded
+        if (savedLead) {
+            await UsageService.checkAndIncrement('save');
+            await loadUsage();
+            await loadSavedLeads();
+        } else {
+            setError('Failed to save lead. Please try again.');
+            setTimeout(() => setError(null), 3000);
+        }
     };
 
     const handleEnrich = async (url: string) => {
@@ -480,64 +492,11 @@ const [session, setSession] = useState<any>(null);
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-6 border-b border-slate-200">
-                            <h2 className="text-lg font-bold text-slate-900">My Saved Leads</h2>
-                        </div>
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Company</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Details</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Date Added</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {savedLeads.map((lead) => (
-                                    <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
-                                        <td className="py-4 px-6 font-medium text-slate-900">{lead.company_name}</td>
-                                        <td className="py-4 px-6">
-                                            <div className="text-sm text-slate-600">
-                                                <span className="font-medium">{lead.niche}</span> • {lead.location}
-                                            </div>
-                                            <a href={lead.url} target="_blank" className="text-xs text-blue-500 hover:underline inline-block mt-1">
-                                                {lead.platform}
-                                            </a>
-                                        </td>
-                                        <td className="py-4 px-6 text-sm text-slate-500">
-                                            {lead.date_added 
-                                                ? new Date(lead.date_added).toLocaleDateString('en-US', { 
-                                                    year: 'numeric', 
-                                                    month: 'short', 
-                                                    day: 'numeric' 
-                                                })
-                                                : 'Just now'
-                                            }
-                                        </td>
-                                        <td className="py-4 px-6 text-right">
-                                            <button 
-                                                onClick={async () => {
-                                                    await LeadService.deleteLead(lead.id);
-                                                    loadSavedLeads();
-                                                }}
-                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {savedLeads.length === 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="py-12 text-center text-slate-500">
-                                            No saved leads yet. Go to Search to add some!
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                    <LeadPipeline 
+                        leads={savedLeads}
+                        onUpdateLead={handleUpdateLead}
+                        onDeleteLead={handleDeleteLead}
+                    />
                 )}
             </main>
 
