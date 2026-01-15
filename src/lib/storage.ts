@@ -11,6 +11,8 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
     : createClient('https://placeholder.supabase.co', 'placeholder');
 
 
+export type PipelineStage = 'new' | 'contacted' | 'follow_up' | 'converted' | 'not_interested';
+
 export interface Lead {
     id: string;
     company_name: string;
@@ -19,7 +21,7 @@ export interface Lead {
     url?: string;
     platform?: string;
     snippet?: string;
-    status: 'new' | 'contacted' | 'follow_up' | 'converted' | 'not_interested';
+    status: PipelineStage;
     email?: string;
     phone?: string;
     notes?: string;

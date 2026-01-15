@@ -8,6 +8,7 @@ import Auth from './Auth';
 import Upgrade from './Upgrade';
 import LeadPipeline from './LeadPipeline';
 import toast from 'react-hot-toast';
+import { ModeToggle } from './ModeToggle';
 
 export default function LeadMachine() {
     const [view, setView] = useState<'search' | 'leads' | 'upgrade'>('search');
@@ -314,6 +315,7 @@ const [session, setSession] = useState<any>(null);
                                 </div>
                             </div>
                         )}
+                        <ModeToggle />
                         <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
                             <button 
                                 onClick={() => setView('search')}

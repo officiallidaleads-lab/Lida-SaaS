@@ -12,12 +12,14 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark mode support via class */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
+
+/* Optional: Keep media query for initial flash prevention if not using script, 
+   but next-themes handles this. We can just use the class. */
 
 body {
   background: var(--background);

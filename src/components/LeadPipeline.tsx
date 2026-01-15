@@ -1,12 +1,34 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Lead } from '@/lib/storage';
+import { useState } from 'react';
 import { 
-    Mail, Phone, MessageSquare, Clock,
-    Calendar, ExternalLink, Tag, CheckCircle, XCircle,
-    Edit3, Trash2, Plus, Minimize2, Maximize2
+    Clock, 
+    CheckCircle2, 
+    XCircle, 
+    AlertCircle, 
+    MoreHorizontal,
+    Mail,
+    Phone,
+    MapPin,
+    ExternalLink,
+    Calendar,
+    ChevronDown,
+    ChevronUp,
+    Edit3,
+    Trash2,
+    LayoutList,
+    KanbanSquare,
+    Plus,
+    Maximize2,
+    Minimize2,
+    Tag,
+    MessageSquare,
+    CheckCircle
 } from 'lucide-react';
+import { type Lead, type PipelineStage } from '@/lib/storage';
+import { motion, AnimatePresence } from 'framer-motion';
+
+
 
 interface LeadPipelineProps {
     leads: Lead[];
@@ -14,7 +36,7 @@ interface LeadPipelineProps {
     onDeleteLead: (leadId: string) => Promise<void>;
 }
 
-type PipelineStage = 'new' | 'contacted' | 'follow_up' | 'converted' | 'not_interested';
+
 
 const STAGE_CONFIG = {
     new: { 
@@ -363,7 +385,20 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                                         No leads yet
                                     </div>
                                 ) : (
-                                    stageLeads.map(renderLeadCard)
+                                    <AnimatePresence mode='popLayout'>
+                                        {stageLeads.map(lead => (
+                                            <motion.div
+                                                key={lead.id}
+                                                layout
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                {renderLeadCard(lead)}
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
                                 )}
                             </div>
                         </div>
