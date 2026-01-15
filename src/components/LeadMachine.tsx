@@ -277,46 +277,52 @@ const [session, setSession] = useState<any>(null);
         return <Auth />;
     }
 
-    if (view === 'upgrade') {
-        return <Upgrade onBack={() => setView('search')} currentPlan={plan} />;
-    }
+    // Removed early return for 'upgrade' view to allow persistent shell
+    // if (view === 'upgrade') {
+    //     return <Upgrade onBack={() => setView('search')} currentPlan={plan} />;
+    // }
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
             {/* Header */}
+            {/* Header - Mobile & Desktop Responsive */}
             <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 transition-colors">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                    {/* Logo Area */}
                     <div className="flex items-center gap-2">
-                        <div className="bg-blue-600 p-2 rounded-lg">
+                        <div className="bg-blue-600 p-2 rounded-lg shrink-0">
                             <Search className="w-5 h-5 text-white" />
                         </div>
-                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent">
-                            Lida <span className="text-slate-400 font-normal text-sm">v2.0</span>
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
+                            Lida
+                            <span className="text-slate-400 font-normal text-xs hidden sm:inline">v2.0</span>
                         </h1>
                         <button 
                             onClick={() => setView('upgrade')}
-                            className="ml-4 px-2 py-1 text-xs font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                            className="ml-2 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors shrink-0"
                         >
-                            {plan} Plan
+                            {plan}
                         </button>
                     </div>
                     
-                    <div className="flex items-center gap-4">
+                    {/* Desktop Navigation & Actions */}
+                    <div className="flex items-center gap-3">
+                        {/* Usage - Hidden on Mobile */}
                         {usage && (
                             <div className="hidden md:flex flex-col items-end mr-4">
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-                                    {plan} Plan
-                                </div>
                                 <div className="bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 border border-transparent dark:border-slate-700">
                                     <div className={`w-2 h-2 rounded-full ${usage.searches_count >= (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 100) ? 'bg-red-500' : 'bg-green-500'}`}></div>
                                     <span>
-                                        {usage.searches_count} / {PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 0} Credits
+                                        {usage.searches_count} / {PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 0}
                                     </span>
                                 </div>
                             </div>
                         )}
+                        
                         <ModeToggle />
-                        <nav className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-transparent dark:border-slate-700">
+                        
+                        {/* Desktop Nav */}
+                        <nav className="hidden md:flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-transparent dark:border-slate-700">
                             <button 
                                 onClick={() => setView('search')}
                                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
@@ -334,20 +340,70 @@ const [session, setSession] = useState<any>(null);
                                 My Leads ({savedLeads.length})
                             </button>
                         </nav>
+
                         <button 
                             onClick={() => supabase.auth.signOut()}
-                            className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                            className="hidden md:block text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                         >
                             Log Out
+                        </button>
+
+                        {/* Mobile Menu Button - Just Logout for now, Nav moves to bottom */}
+                        <button 
+                            onClick={() => supabase.auth.signOut()}
+                             className="md:hidden p-2 text-slate-500 dark:text-slate-400"
+                        >
+                            <span className="sr-only">Log out</span>
+                            <Lock className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
             </header>
 
+            {/* Mobile Bottom Navigation Bar */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 z-50 px-4 py-2 safe-area-bottom">
+                 <div className="flex justify-around items-center">
+                    <button 
+                        onClick={() => setView('search')}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-full ${
+                            view === 'search' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                    >
+                        <Search className="w-6 h-6" />
+                        <span className="text-[10px] font-medium">Search</span>
+                    </button>
+                    <button 
+                        onClick={() => setView('leads')}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-full ${
+                            view === 'leads' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                    >
+                        <div className="relative">
+                            <Building2 className="w-6 h-6" />
+                            {savedLeads.length > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                    {savedLeads.length}
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-[10px] font-medium">Leads</span>
+                    </button>
+                    <button 
+                        onClick={() => setView('upgrade')}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-full ${
+                            view === 'upgrade' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'
+                        }`}
+                    >
+                        <Zap className="w-6 h-6" />
+                        <span className="text-[10px] font-medium">Upgrade</span>
+                    </button>
+                 </div>
+            </div>
+
             {view === 'search' && (
-                <main className="max-w-3xl mx-auto px-4 py-12">
-                    <div className="text-center mb-12">
-                        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+                <main className="max-w-3xl mx-auto px-4 py-8 md:py-12 pb-24 md:pb-12">
+                    <div className="text-center mb-8 md:mb-12">
+                        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white mb-3 md:mb-4 tracking-tight">
                             Find Your Next Big Client
                         </h2>
                         <p className="text-lg text-slate-600 dark:text-slate-400">
@@ -545,12 +601,18 @@ const [session, setSession] = useState<any>(null);
             )}
 
             {view === 'leads' && (
-                <main className="max-w-7xl mx-auto px-4 py-8">
+                <main className="max-w-7xl mx-auto px-4 py-8 md:py-8 pb-24 md:pb-8">
                      <LeadPipeline 
                         leads={savedLeads} 
                         onUpdateLead={handleUpdateLead}
                         onDeleteLead={handleDeleteLead}
                     />
+                </main>
+            )}
+
+            {view === 'upgrade' && (
+                <main className="max-w-7xl mx-auto px-4 py-8 md:py-8 pb-24 md:pb-8">
+                    <Upgrade onBack={() => setView('search')} currentPlan={plan} />
                 </main>
             )}
             
