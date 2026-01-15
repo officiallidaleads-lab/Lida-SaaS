@@ -107,16 +107,24 @@ export const UsageService = {
 
 export const LeadService = {
     getLeads: async (): Promise<Lead[]> => {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+            console.error('User must be logged in');
+            return [];
+        }
 
         const { data, error } = await supabase
-            .from('leads')
+            .from('saved_leads')
             .select('*')
-            .order('created_at', { ascending: false });
-        
+            .eq('user_id', user.id)
+            .order('date_added', { ascending: false });
+
         if (error) {
             console.error('Error fetching leads:', error);
             return [];
         }
+
         return data || [];
     },
 
@@ -129,7 +137,7 @@ export const LeadService = {
         }
 
         const { data, error } = await supabase
-            .from('leads')
+            .from('saved_leads')
             .insert([{ 
                 ...lead, 
                 user_id: user.id,
@@ -147,7 +155,7 @@ export const LeadService = {
 
     deleteLead: async (id: string): Promise<void> => {
         const { error } = await supabase
-            .from('leads')
+            .from('saved_leads')
             .delete()
             .eq('id', id);
         
