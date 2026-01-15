@@ -2,29 +2,28 @@
 
 import { useState } from 'react';
 import { 
-    Clock, 
-    CheckCircle2, 
-    XCircle, 
-    AlertCircle, 
-    MoreHorizontal,
+    Clock,
+    XCircle,
     Mail,
     Phone,
-    MapPin,
     ExternalLink,
-    Calendar,
-    ChevronDown,
-    ChevronUp,
-    Edit3,
     Trash2,
-    LayoutList,
-    KanbanSquare,
-    Plus,
     Maximize2,
     Minimize2,
+    Plus,
     Tag,
     MessageSquare,
-    CheckCircle
+    CheckCircle,
+    User,
+    Copy,
+    FileEdit,
+    Columns,
+    List,
+    Globe,
+    X
 } from 'lucide-react';
+import React from 'react';
+import { toast } from 'react-hot-toast';
 import { type Lead, type PipelineStage } from '@/lib/storage';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -41,27 +40,27 @@ interface LeadPipelineProps {
 const STAGE_CONFIG = {
     new: { 
         label: 'New Leads', 
-        color: 'bg-blue-100 text-blue-700 border-blue-300',
+        color: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
         icon: Plus 
     },
     contacted: { 
         label: 'Contacted', 
-        color: 'bg-purple-100 text-purple-700 border-purple-300',
+        color: 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
         icon: MessageSquare 
     },
     follow_up: { 
         label: 'Follow Up', 
-        color: 'bg-orange-100 text-orange-700 border-orange-300',
+        color: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
         icon: Clock 
     },
     converted: { 
         label: 'Converted', 
-        color: 'bg-green-100 text-green-700 border-green-300',
+        color: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
         icon: CheckCircle 
     },
     not_interested: { 
         label: 'Not Interested', 
-        color: 'bg-slate-100 text-slate-700 border-slate-300',
+        color: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
         icon: XCircle 
     }
 };
@@ -74,13 +73,6 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
     const [updatingStage, setUpdatingStage] = useState(false);
     const [editingNotes, setEditingNotes] = useState(false);
 
-    const groupedLeads = leads.reduce((acc, lead) => {
-        const stage = lead.status || 'new';
-        if (!acc[stage]) acc[stage] = [];
-        acc[stage].push(lead);
-        return acc;
-    }, {} as Record<PipelineStage, Lead[]>);
-
     const handleSaveNote = async (lead: Lead) => {
         // Save the note exactly as typed (no timestamps, no appending)
         await onUpdateLead(lead.id, { notes: noteText.trim() });
@@ -88,10 +80,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
         setEditingNotes(false);
     };
 
-    const handleEditNote = (lead: Lead) => {
-        setNoteText(lead.notes || '');
-        setEditingNotes(true);
-    };
+
 
     const handleStageChange = async (lead: Lead, newStage: PipelineStage) => {
         setUpdatingStage(true);
@@ -122,9 +111,9 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                 </div>
             );
         }
-        
+
         return (
-            <div 
+            <div
                 key={lead.id}
                 className={`bg-white rounded-xl border-2 p-4 mb-3 cursor-pointer transition-all hover:shadow-lg ${
                     isSelected ? 'border-blue-500 shadow-xl' : 'border-slate-200'
@@ -142,7 +131,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                             <span>{lead.location}</span>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={(e) => {
                             e.stopPropagation();
                             onDeleteLead(lead.id);
@@ -156,7 +145,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                 {/* Quick Info */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                     {lead.email && (
-                        <a 
+                        <a
                             href={`mailto:${lead.email}`}
                             className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
                             onClick={(e) => e.stopPropagation()}
@@ -166,7 +155,7 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                         </a>
                     )}
                     {lead.phone && (
-                        <a 
+                        <a
                             href={`tel:${lead.phone}`}
                             className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
                             onClick={(e) => e.stopPropagation()}
@@ -176,234 +165,291 @@ export default function LeadPipeline({ leads, onUpdateLead, onDeleteLead }: Lead
                         </a>
                     )}
                     {lead.url && (
-                        <a 
-                            href={lead.url}
-                            target="_blank"
-                            className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs hover:bg-purple-100 transition-colors"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <ExternalLink className="w-3 h-3" />
-                            Visit
-                        </a>
+                        <div className="flex gap-1">
+                            <a
+                                href={lead.url}
+                                target="_blank"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400 hover:text-blue-600"
+                                title="Open Link"
+                            >
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </div>
                     )}
                 </div>
 
-                {/* Expanded Details */}
-                {isSelected && (
-                    <div className="border-t border-slate-200 pt-4 mt-4 space-y-4">
-                        {/* Stage Changer */}
-                        <div>
-                            <label className="text-xs font-semibold text-slate-700 mb-2 block">
-                                {updatingStage ? '⏳ Updating...' : 'Move to Stage:'}
-                            </label>
-                            <div className="flex gap-2 flex-wrap">
-                                {Object.entries(STAGE_CONFIG).map(([stage, config]) => (
-                                    <button
-                                        key={stage}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleStageChange(lead, stage as PipelineStage);
-                                        }}
-                                        disabled={updatingStage}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                                            lead.status === stage
-                                                ? config.color + ' border-2'
-                                                : 'bg-slate-100 text-slate-600 border-2 border-transparent hover:border-slate-300'
-                                        } ${updatingStage ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        {config.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Notes Section - Clean & Minimal */}
-                        <div>
-                            <label className="text-xs font-semibold text-slate-700 mb-3 block">
-                                📝 Notes
-                            </label>
-                            
-                            {/* Empty State - Centered Pill */}
-                            {!editingNotes && !lead.notes && (
-                                <div className="flex justify-center py-3">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setNoteText('');
-                                            setEditingNotes(true);
-                                        }}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
-                                    >
-                                        Add Note
-                                    </button>
-                                </div>
-                            )}
-                            
-                            {/* Show Note (Read-only) */}
-                            {!editingNotes && lead.notes && (
-                                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 relative group">
-                                    <p className="text-sm text-slate-700 whitespace-pre-wrap">
-                                        {lead.notes}
-                                    </p>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditNote(lead);
-                                        }}
-                                        className="absolute top-2 right-2 px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 transition-colors opacity-0 group-hover:opacity-100"
-                                    >
-                                        Edit
-                                    </button>
-                                </div>
-                            )}
-                            
-                            {/* Editor */}
-                            {editingNotes && (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={noteText}
-                                        onChange={(e) => setNoteText(e.target.value)}
-                                        placeholder="Type your notes here..."
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-                                        rows={4}
-                                        onClick={(e) => e.stopPropagation()}
-                                        autoFocus
-                                    />
-                                    <div className="flex gap-2 justify-end">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingNotes(false);
-                                                setNoteText('');
-                                            }}
-                                            className="px-4 py-1.5 bg-slate-100 text-slate-700 rounded text-sm font-medium hover:bg-slate-200 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSaveNote(lead);
-                                            }}
-                                            className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors"
-                                        >
-                                            Save
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                {lead.url && (
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-2">
+                        <Globe className="w-3 h-3" />
+                        <span className="truncate max-w-[120px]">{new URL(lead.url).hostname}</span>
                     </div>
                 )}
 
-                {/* Footer - Date */}
-                <div className="flex items-center gap-2 text-xs text-slate-400 mt-3 pt-3 border-t border-slate-100">
-                    <Calendar className="w-3 h-3" />
-                    <span>Added {new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                {/* Enrichment Indicators */}
+                {(lead.email || lead.phone) && (
+                     <div className="flex gap-1 mb-2">
+                        {lead.email && <div className="w-1.5 h-1.5 rounded-full bg-green-500" title="Email Found"></div>}
+                        {lead.phone && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Phone Found"></div>}
+                     </div>
+                )}
+
+                {/* Note Preview */}
+                {lead.notes && (
+                    <div className="text-xs text-slate-500 dark:text-slate-500 italic bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded border border-slate-100 dark:border-slate-800 line-clamp-2">
+                        &quot;{lead.notes}&quot;
+                    </div>
+                )}
+
+                <div className="text-[10px] text-slate-400 mt-2 flex justify-between items-center">
+                    <span>{new Date(lead.created_at).toLocaleDateString()}</span>
                 </div>
             </div>
         );
     };
 
-    if (viewMode === 'list') {
-        return (
-            <div className="space-y-4">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-slate-900">My Leads ({leads.length})</h2>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setCompactMode(!compactMode)}
-                            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 flex items-center gap-2"
-                        >
-                            {compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-                            {compactMode ? 'Expand' : 'Compact'}
-                        </button>
+    return (
+        <div className="h-[calc(100vh-140px)] flex flex-col">
+            {/* Toolbar */}
+            <div className="flex justify-between items-center mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+                 <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <Columns className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Lead Pipeline
+                    </h2>
+                    <div className="h-6 w-px bg-slate-200 dark:bg-slate-700"></div>
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
                         <button
                             onClick={() => setViewMode('pipeline')}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'pipeline' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
                         >
-                            Pipeline View
+                            <Columns className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                        >
+                            <List className="w-4 h-4" />
                         </button>
                     </div>
-                </div>
-                <div className="grid gap-4">
-                    {leads.map(renderLeadCard)}
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900">Lead Pipeline</h2>
-                    <p className="text-sm text-slate-500 mt-1">Manage your sales pipeline & track progress</p>
-                </div>
-                <div className="flex gap-2">
+                    
                     <button
                         onClick={() => setCompactMode(!compactMode)}
-                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 flex items-center gap-2"
+                        className="p-2 ml-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 transition-colors"
+                        title={compactMode ? "Expand Cards" : "Compact Cards"}
                     >
-                        {compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
-                        {compactMode ? 'Expand Cards' : 'Compact'}
+                         {compactMode ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
                     </button>
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200"
-                    >
-                        List View
-                    </button>
-                </div>
+                 </div>
+
+                 <div className="flex gap-2">
+                     <button
+                        onClick={() => setSelectedLead(null)}
+                        className="text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 underline decoration-slate-300 dark:decoration-slate-600 underline-offset-4"
+                     >
+                         Close Detail
+                     </button>
+                 </div>
             </div>
 
-            {/* Pipeline Columns */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {(Object.keys(STAGE_CONFIG) as PipelineStage[]).map((stage) => {
-                    const config = STAGE_CONFIG[stage];
-                    const stageLeads = groupedLeads[stage] || [];
-                    const Icon = config.icon;
+            <div className="flex-1 flex gap-6 overflow-hidden">
+                {/* Pipeline Board */}
+                <div className={`flex-1 overflow-x-auto pb-4 ${selectedLead ? 'w-2/3 max-w-[66%]' : 'w-full'} transition-all duration-300`}>
+                    <div className="flex gap-4 min-w-[1000px] h-full">
+                        {(Object.entries(STAGE_CONFIG) as [PipelineStage, typeof STAGE_CONFIG[PipelineStage]][]).map(([stageKey, config]) => {
+                            const stageLeads = leads.filter(l => l.status === stageKey);
+                            const Icon = config.icon;
 
-                    return (
-                        <div key={stage} className="bg-slate-50 rounded-xl p-4 flex flex-col" style={{ maxHeight: '80vh' }}>
-                            {/* Column Header */}
-                            <div className="flex items-center gap-2 mb-4 flex-shrink-0">
-                                <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
-                                    <Icon className="w-4 h-4" />
+                            return (
+                                <div key={stageKey} className="flex-1 min-w-[280px] flex flex-col h-full">
+                                    {/* Column Header */}
+                                    <div className={`
+                                        flex items-center justify-between p-3 rounded-t-xl border-b-2
+                                        ${config.color.replace('bg-', 'bg-opacity-20 ')}
+                                    `}>
+                                        <div className="flex items-center gap-2 font-semibold">
+                                            <Icon className="w-4 h-4 opacity-70" />
+                                            {config.label}
+                                            <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold ml-2">
+                                                {stageLeads.length}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Column Body */}
+                                    <div className="flex-1 bg-slate-50/50 dark:bg-slate-900/50 border-x border-b border-slate-200 dark:border-slate-800 rounded-b-xl p-3 overflow-y-auto custom-scrollbar">
+                                        {stageLeads.length === 0 ? (
+                                            <div className="h-32 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg">
+                                                <small>No leads</small>
+                                            </div>
+                                        ) : (
+                                            <AnimatePresence mode='popLayout'>
+                                                {stageLeads.map(lead => (
+                                                    <motion.div
+                                                        key={lead.id}
+                                                        layout
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0.9 }}
+                                                        transition={{ duration: 0.2 }}
+                                                    >
+                                                        {renderLeadCard(lead)}
+                                                    </motion.div>
+                                                ))}
+                                            </AnimatePresence>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold text-slate-900 text-sm">{config.label}</h3>
-                                    <p className="text-xs text-slate-500">{stageLeads.length} leads</p>
-                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Detail Panel */}
+                <AnimatePresence>
+                {selectedLead && (
+                    <motion.div
+                        initial={{ x: 300, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: 300, opacity: 0 }}
+                        className="w-1/3 min-w-[400px] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl z-20 h-full flex flex-col rounded-l-2xl overflow-hidden"
+                    >
+                        {/* Detail Header */}
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                            <div className="flex justify-between items-start mb-4">
+                                <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-snug pr-8">
+                                    {selectedLead.company_name}
+                                </h2>
+                                <button
+                                    onClick={() => setSelectedLead(null)}
+                                    className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-slate-400" />
+                                </button>
                             </div>
 
-                            {/* Cards - Scrollable */}
-                            <div className="flex-1 overflow-y-auto space-y-3 pr-2" style={{ minHeight: '200px' }}>
-                                {stageLeads.length === 0 ? (
-                                    <div className="text-center py-8 text-slate-400 text-sm">
-                                        No leads yet
-                                    </div>
-                                ) : (
-                                    <AnimatePresence mode='popLayout'>
-                                        {stageLeads.map(lead => (
-                                            <motion.div
-                                                key={lead.id}
-                                                layout
-                                                initial={{ opacity: 0, y: 20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, scale: 0.9 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                {renderLeadCard(lead)}
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
-                                )}
+                            <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mb-6">
+                                <a
+                                    href={selectedLead.url}
+                                    target="_blank"
+                                    className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                                >
+                                    <Globe className="w-4 h-4" />
+                                    {new URL(selectedLead.url!).hostname}
+                                    <ExternalLink className="w-3 h-3 ml-0.5" />
+                                </a>
+                                <span>•</span>
+                                <span>Added {new Date(selectedLead.created_at).toLocaleDateString()}</span>
+                            </div>
+
+                            {/* Stage Selector using our config */}
+                            <div className="grid grid-cols-5 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                                {(Object.keys(STAGE_CONFIG) as PipelineStage[]).map((stage) => (
+                                    <button
+                                        key={stage}
+                                        onClick={() => handleStageChange(selectedLead, stage)}
+                                        disabled={updatingStage}
+                                        className={`
+                                            py-2 rounded-md flex justify-center items-center transition-all relative group
+                                            ${selectedLead.status === stage 
+                                                ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-medium' 
+                                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                                            }
+                                            ${updatingStage ? 'opacity-50 cursor-not-allowed' : ''}
+                                        `}
+                                        title={STAGE_CONFIG[stage].label}
+                                    >
+                                        {/* Icon only for compact tab */}
+                                        {React.createElement(STAGE_CONFIG[stage].icon, { className: "w-4 h-4" })}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="text-center mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                Current Stage: <span className="text-slate-800 dark:text-slate-200">{STAGE_CONFIG[selectedLead.status].label}</span>
                             </div>
                         </div>
-                    );
-                })}
+
+                        {/* Detail Body */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+                            {/* Notes Section */}
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <FileEdit className="w-4 h-4" /> Notes
+                                </h3>
+                                <div className="relative">
+                                    <textarea
+                                        value={noteText}
+                                        onChange={(e) => setNoteText(e.target.value)}
+                                        onFocus={() => setEditingNotes(true)}
+                                        placeholder="Add notes about this lead..."
+                                        className="w-full h-32 p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-lg text-slate-700 dark:text-slate-300 placeholder:text-yellow-700/30 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-all resize-none text-sm leading-relaxed"
+                                    />
+                                    {editingNotes && (
+                                        <div className="absolute bottom-3 right-3 flex gap-2">
+                                            <button
+                                                onClick={() => setEditingNotes(false)}
+                                                className="px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-800 bg-white/50 rounded-md hover:bg-white transition-all shadow-sm"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={() => handleSaveNote(selectedLead)}
+                                                className="px-3 py-1 text-xs font-bold text-yellow-800 bg-yellow-200 hover:bg-yellow-300 rounded-md transition-all shadow-sm"
+                                            >
+                                                Save Note
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Contact Info (if enriched) */}
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <User className="w-4 h-4" /> Contact Details
+                                </h3>
+                                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700 p-4 space-y-3">
+                                    {!selectedLead.email && !selectedLead.phone && (
+                                        <div className="text-center py-4 text-slate-400 text-sm">
+                                            No contact info found yet. <br/>
+                                            <button className="text-blue-500 hover:underline mt-1">Run Enrichment</button>
+                                        </div>
+                                    )}
+
+                                    {selectedLead.email && (
+                                        <div className="flex items-center justify-between group">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+                                                    <Mail className="w-4 h-4" />
+                                                </div>
+                                                <span className="text-slate-700 dark:text-slate-300 font-medium text-sm">{selectedLead.email}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(selectedLead.email!);
+                                                    toast.success("Email copied");
+                                                }}
+                                                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-400 transition-all"
+                                            >
+                                                <Copy className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Content Snippet */}
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Original Content</h3>
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    {selectedLead.snippet}
+                                </div>
+                            </div>
+
+                        </div>
+                    </motion.div>
+                )}
+                </AnimatePresence>
             </div>
         </div>
     );

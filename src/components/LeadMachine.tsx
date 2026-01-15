@@ -282,9 +282,9 @@ const [session, setSession] = useState<any>(null);
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
             {/* Header */}
-            <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
+            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10 transition-colors">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="bg-blue-600 p-2 rounded-lg">
@@ -295,7 +295,7 @@ const [session, setSession] = useState<any>(null);
                         </h1>
                         <button 
                             onClick={() => setView('upgrade')}
-                            className="ml-4 px-2 py-1 text-xs font-bold uppercase tracking-wide bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors"
+                            className="ml-4 px-2 py-1 text-xs font-bold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
                         >
                             {plan} Plan
                         </button>
@@ -307,7 +307,7 @@ const [session, setSession] = useState<any>(null);
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
                                     {plan} Plan
                                 </div>
-                                <div className="bg-slate-100 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 flex items-center gap-2">
+                                <div className="bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 border border-transparent dark:border-slate-700">
                                     <div className={`w-2 h-2 rounded-full ${usage.searches_count >= (PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 100) ? 'bg-red-500' : 'bg-green-500'}`}></div>
                                     <span>
                                         {usage.searches_count} / {PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS]?.searches || 0} Credits
@@ -316,11 +316,11 @@ const [session, setSession] = useState<any>(null);
                             </div>
                         )}
                         <ModeToggle />
-                        <nav className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                        <nav className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-transparent dark:border-slate-700">
                             <button 
                                 onClick={() => setView('search')}
                                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                    view === 'search' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'
+                                    view === 'search' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                                 }`}
                             >
                                 Search
@@ -328,7 +328,7 @@ const [session, setSession] = useState<any>(null);
                             <button 
                                 onClick={() => setView('leads')}
                                 className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                                    view === 'leads' ? 'bg-white shadow text-blue-600' : 'text-slate-600 hover:text-slate-900'
+                                    view === 'leads' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                                 }`}
                             >
                                 My Leads ({savedLeads.length})
@@ -336,7 +336,7 @@ const [session, setSession] = useState<any>(null);
                         </nav>
                         <button 
                             onClick={() => supabase.auth.signOut()}
-                            className="text-sm font-medium text-slate-500 hover:text-slate-800"
+                            className="text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                         >
                             Log Out
                         </button>
@@ -344,20 +344,28 @@ const [session, setSession] = useState<any>(null);
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-8">
-                {view === 'search' ? (
-                    <div className="space-y-6">
-                        {/* Search Controls */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {view === 'search' && (
+                <main className="max-w-3xl mx-auto px-4 py-12">
+                    <div className="text-center mb-12">
+                        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-4 tracking-tight">
+                            Find Your Next Big Client
+                        </h2>
+                        <p className="text-lg text-slate-600 dark:text-slate-400">
+                            AI-powered lead generation across web & social media
+                        </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 mb-8 transition-colors">
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase">Platform</label>
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Platform</label>
                                     <div className="relative">
                                         <Globe className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                         <select 
                                             value={platform}
                                             onChange={(e) => setPlatform(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none appearance-none"
                                         >
                                             <option value="linkedin.com">LinkedIn</option>
                                             <option value="facebook.com">Facebook</option>
@@ -367,27 +375,27 @@ const [session, setSession] = useState<any>(null);
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase">Niche</label>
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Niche</label>
                                     <div className="relative">
                                         <Building2 className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                         <input 
                                             type="text" 
                                             value={niche}
                                             onChange={(e) => setNiche(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none placeholder:text-slate-400"
                                             placeholder="e.g. Real Estate"
                                         />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-slate-500 uppercase">Location</label>
+                                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Location</label>
                                     <div className="relative">
                                         <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
                                         <input 
                                             type="text" 
                                             value={location}
                                             onChange={(e) => setLocation(e.target.value)}
-                                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
+                                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none placeholder:text-slate-400"
                                             placeholder="e.g. Nairobi"
                                         />
                                     </div>
@@ -404,132 +412,152 @@ const [session, setSession] = useState<any>(null);
                                 </div>
                             </div>
                         </div>
+                    </div>
 
 
-                        {/* Error Message */}
-                        {error && (
-                            <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-pulse">
-                                <div className="w-2 h-2 bg-red-500 rounded-full" />
-                                {error}
-                            </div>
-                        )}
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-pulse">
+                            <div className="w-2 h-2 bg-red-500 rounded-full" />
+                            {error}
+                        </div>
+                    )}
 
-                        {/* Search Results */}
+                    {/* Results */}
+                    <div className="space-y-4">
                         {results.length > 0 && (
-                            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-200">
-                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Company / Title</th>
-                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase">Platform</th>
-                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {results.map((item, i) => (
-                                            <tr key={i} className="hover:bg-slate-50 transition-colors">
-                                                <td className="py-4 px-6">
-                                                    <div>
-                                                        <h3 className="font-medium text-slate-900 line-clamp-1" title={item.title}>{item.title}</h3>
-                                                        <a href={item.link} target="_blank" className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1">
-                                                            Visit Page <ExternalLink className="w-3 h-3" />
-                                                        </a>
-                                                        {item.enrichment && (
-                                                            <div className="mt-3 bg-green-50 border border-green-100 rounded-lg p-3 text-sm">
-                                                                <div className="flex items-center gap-2 text-green-700 font-medium mb-2">
-                                                                    <CheckCircle className="w-4 h-4" /> AI Enriched (Confidence: {item.enrichment.relevance_score}%)
-                                                                </div>
-                                                                <div className="space-y-1 text-slate-600">
-                                                                    {item.enrichment.emails && item.enrichment.emails.length > 0 ? (
-                                                                        item.enrichment.emails.map((email: string) => (
-                                                                            <div key={email} className="flex items-center gap-2 text-xs">
-                                                                                <Mail className="w-3 h-3" /> {email}
-                                                                            </div>
-                                                                        ))
-                                                                    ) : (
-                                                                        <div className="text-xs text-slate-400 italic">No email found</div>
-                                                                    )}
-                                                                    {item.enrichment.phones && item.enrichment.phones.length > 0 ? (
-                                                                        item.enrichment.phones.map((phone: string) => (
-                                                                            <div key={phone} className="flex items-center gap-2 text-xs">
-                                                                                <Smartphone className="w-3 h-3" /> {phone}
-                                                                            </div>
-                                                                        ))
-                                                                    ) : (
-                                                                        <div className="text-xs text-slate-400 italic">No phone found</div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-6">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 capitalize">
-                                                        {item.searchedPlatform?.split('.')[0] || 'unknown'}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 px-6 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button 
-                                                            onClick={() => handleEnrich(item.link)}
-                                                            disabled={item.enriching || item.enrichment}
-                                                            className={`p-2 rounded-lg transition-all ${
-                                                                item.enrichment 
-                                                                    ? 'bg-green-100 text-green-700' 
-                                                                    : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                                                            }`}
-                                                            title="Deep Search with AI"
-                                                        >
-                                                            {item.enriching ? (
-                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                            ) : (
-                                                                <Bot className="w-4 h-4" />
-                                                            )}
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleSave(item)}
-                                                            className={`p-2 rounded-lg transition-all cursor-pointer ${
-                                                                savedLeads.some(l => l.url === item.link)
-                                                                    ? 'bg-green-100 text-green-700'
-                                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                                            }`}
-                                                            title={savedLeads.some(l => l.url === item.link) ? "Lead Saved" : "Save Lead"}
-                                                        >
-                                                            {savedLeads.some(l => l.url === item.link) ? <CheckCircle className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    Found {results.length} Leads
+                                </h3>
+                                <button
+                                    onClick={() => setResults([])}
+                                    className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                >
+                                    Clear Results
+                                </button>
                             </div>
                         )}
                         
-                        {/* Empty State */}
-                        {!loading && results.length === 0 && (
-                            <div className="text-center py-12 bg-white rounded-xl border border-slate-200 px-4">
-                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Search className="w-8 h-8 text-slate-400" />
+                        {results.map((item, i) => {
+                            const isSaved = savedLeads.some(l => l.url === item.link);
+
+                            return (
+                                <div 
+                                    key={i} 
+                                    className={`group bg-white dark:bg-slate-900 rounded-xl p-5 border transition-all hover:shadow-lg ${
+                                        isSaved 
+                                            ? 'border-green-200 dark:border-green-900 bg-green-50/30 dark:bg-green-900/10' 
+                                            : 'border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                                {item.title}
+                                            </h3>
+                                            <a 
+                                                href={item.link} 
+                                                target="_blank" 
+                                                className="text-sm text-slate-400 hover:text-blue-500 flex items-center gap-1 mt-1 mb-2"
+                                            >
+                                                <ExternalLink className="w-3 h-3" />
+                                                {new URL(item.link).hostname}
+                                            </a>
+                                            <p className="text-slate-600 dark:text-slate-400 text-sm line-clamp-2">{item.snippet}</p>
+                                            
+                                            {/* Labels / Tags */}
+                                            <div className="flex gap-2 mt-4">
+                                                {/* Enrichment UI */}
+                                                {item.enriching ? (
+                                                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs border border-purple-100 dark:border-purple-800">
+                                                        <Loader2 className="w-3 h-3 animate-spin"/> Enriching...
+                                                     </span>
+                                                ) : item.enrichment ? (
+                                                    <div className="flex gap-2">
+                                                        {item.enrichment.emails.length > 0 && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs border border-green-100 dark:border-green-800">
+                                                                <Mail className="w-3 h-3"/> {item.enrichment.emails.length} Emails
+                                                            </span>
+                                                        )}
+                                                        {item.enrichment.phones.length > 0 && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs border border-blue-100 dark:border-blue-800">
+                                                                <Smartphone className="w-3 h-3"/> Phone Found
+                                                            </span>
+                                                        )}
+                                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs border border-amber-100 dark:border-amber-800">
+                                                            <Zap className="w-3 h-3"/> {item.enrichment.relevance_score}% Match
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <button 
+                                                        onClick={() => handleEnrich(item.link)}
+                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                                                    >
+                                                        <Bot className="w-3 h-3" /> Enrich Lead
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => isSaved ? null : handleSave(item)}
+                                            disabled={isSaved}
+                                            className={`p-3 rounded-lg transition-all ${
+                                                isSaved 
+                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 cursor-default' 
+                                                : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600'
+                                            }`}
+                                        >
+                                            {isSaved ? <CheckCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                                        </button>
+                                    </div>
                                 </div>
-                                <h3 className="text-lg font-medium text-slate-900">Ready to find leads?</h3>
-                                <p className="text-slate-500 mt-2 max-w-sm mx-auto">Select a platform and niche above to start searching for potential clients using our advanced AI-powered engine.</p>
+                            );
+                        })}
+
+                        {/* Pagination */}
+                        {results.length > 0 && (
+                            <div className="flex justify-center gap-4 mt-8">
+                                <button 
+                                    onClick={() => {
+                                        setPage(p => Math.max(1, p - 1));
+                                        handleSearch();
+                                    }}
+                                    disabled={page === 1}
+                                    className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 disabled:opacity-50"
+                                >
+                                    Previous
+                                </button>
+                                <span className="flex items-center text-slate-600 dark:text-slate-400 font-medium">Page {page}</span>
+                                <button 
+                                    onClick={() => {
+                                        setPage(p => p + 1);
+                                        handleSearch();
+                                    }}
+                                    className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                >
+                                    Next
+                                </button>
                             </div>
                         )}
                     </div>
-                ) : (
-                    <LeadPipeline 
-                        leads={savedLeads}
+                </main>
+            )}
+
+            {view === 'leads' && (
+                <main className="max-w-7xl mx-auto px-4 py-8">
+                     <LeadPipeline 
+                        leads={savedLeads} 
                         onUpdateLead={handleUpdateLead}
                         onDeleteLead={handleDeleteLead}
                     />
-                )}
-            </main>
-
+                </main>
+            )}
+            
             {/* Limit Reached Modal */}
             {showLimitModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full p-6 text-center border border-slate-200 dark:border-slate-800">
                         <button 
                             onClick={() => setShowLimitModal(false)}
                             className="absolute right-4 top-4 text-slate-400 hover:text-slate-600 p-1"
